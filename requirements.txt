@@ -1,0 +1,23 @@
+# Core
+pandas==2.2.3
+numpy==2.1.3
+pyyaml==6.0.2
+
+# ML
+scikit-learn==1.5.2
+lightgbm==4.5.0
+joblib==1.4.2
+matplotlib==3.9.2
+
+# API
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+pydantic==2.10.2
+python-dotenv==1.0.1
+
+# LLM (swap provider here — only llm_service.py should care)
+openai==1.57.0
+
+# Test
+pytest==8.3.4
+httpx==0.28.0

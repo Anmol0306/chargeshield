@@ -1,0 +1,7 @@
+# Chronological split on TransactionDT. Quantiles, not hardcoded seconds —
+# so the split survives a change of data subset.
+# NOTE: test_transaction.csv has NO labels. All three splits come from
+# train_transaction.csv.
+train_end_q: 0.70
+val_end_q: 0.85
+# test = final 0.15, never touched until the last run

@@ -1,0 +1,28 @@
+# Illustrative merchant cost assumptions. NOT Razorpay figures.
+# Referenced in README under "Cost model". Sensitivity swept across all three.
+#
+# Source data (IEEE-CIS) is USD. Conversion stated explicitly so the
+# rupee figures are a labelled overlay, not a claim about the dataset.
+currency:
+  dataset: USD
+  display: INR
+  usd_to_inr: 88.0          # state the rate you actually use, and the date
+
+scenarios:
+  conservative:
+    fp_cost_inr: 300         # blocked legitimate txn: lost margin + friction
+    fn_cost_inr: 1000        # missed fraud: loss + chargeback fee + ops
+  balanced:
+    fp_cost_inr: 500
+    fn_cost_inr: 2000
+  high_fraud_cost:
+    fp_cost_inr: 500
+    fn_cost_inr: 4000
+
+default_scenario: balanced
+
+# Dispute-side policy limits (deterministic, not learned)
+policy:
+  auto_action_amount_cap_inr: 25000   # above this -> HUMAN_REVIEW regardless
+  review_band_low: 0.30               # provisional; overwritten by cost_curve.py
+  review_band_high: 0.70

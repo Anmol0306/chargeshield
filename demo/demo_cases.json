@@ -1,0 +1,7 @@
+[
+  {"_comment": "The four scenarios you record. Each maps to a test in tests/."},
+  {"id": "demo_01", "scenario": "missing_evidence",  "expect": "HUMAN_REVIEW"},
+  {"id": "demo_02", "scenario": "hallucinated_3ds",  "expect": "REJECT_PROPOSAL"},
+  {"id": "demo_03", "scenario": "malformed_json",    "expect": "TEMPLATE_FALLBACK"},
+  {"id": "demo_04", "scenario": "adapter_timeout",   "expect": "QUEUED_NO_DUPLICATE"}
+]

@@ -1,0 +1,15 @@
+{
+  "_comment": "Map reason_code -> evidence. Populate from Razorpay's dispute evidence docs, not from memory. Cite the doc URL in README.",
+  "FRAUD": {
+    "required": ["authentication_record", "customer_communication"],
+    "optional": ["device_fingerprint", "ip_address", "transaction_history"]
+  },
+  "NON_RECEIPT": {
+    "required": ["shipping_proof", "delivery_confirmation"],
+    "optional": ["invoice", "order_record", "tracking_number"]
+  },
+  "SERVICE_NOT_RENDERED": {
+    "required": ["service_access_log", "invoice"],
+    "optional": ["customer_communication", "terms_acceptance"]
+  }
+}

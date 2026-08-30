@@ -1,0 +1,23 @@
+# Data — never commit. IEEE-CIS is ~1.35GB.
+data/raw/
+data/processed/
+*.csv
+!data/sample/*.csv
+
+# Artifacts
+artifacts/*.pkl
+artifacts/*.joblib
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
