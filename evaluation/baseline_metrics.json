@@ -1,0 +1,80 @@
+{
+  "split": {
+    "val": {
+      "pr_auc": 0.2858325969890898,
+      "roc_auc": 0.830657169970007,
+      "brier": 0.1484765669176005,
+      "prevalence": 0.03434145019812375,
+      "n": 88581,
+      "at_val_selected_threshold": {
+        "threshold": 0.7899999999999999,
+        "precision": 0.27170263788968824,
+        "recall": 0.3724523339907955,
+        "f1": 0.3141985579589573,
+        "confusion_matrix": {
+          "tn": 82502,
+          "fp": 3037,
+          "fn": 1909,
+          "tp": 1133
+        },
+        "predicted_positive_rate": 0.04707555796389745
+      },
+      "at_threshold_0.5": {
+        "threshold": 0.5,
+        "precision": 0.10975911361725281,
+        "recall": 0.7294543063773833,
+        "f1": 0.1908078593232727,
+        "confusion_matrix": {
+          "tn": 67541,
+          "fp": 17998,
+          "fn": 823,
+          "tp": 2219
+        },
+        "predicted_positive_rate": 0.2282317878551834
+      }
+    },
+    "test": {
+      "pr_auc": 0.22315242682677783,
+      "roc_auc": 0.8201380176558372,
+      "brier": 0.16723472439371026,
+      "prevalence": 0.03480430340592226,
+      "n": 88581,
+      "at_val_selected_threshold": {
+        "threshold": 0.7899999999999999,
+        "precision": 0.21245701184562477,
+        "recall": 0.36068764190723324,
+        "f1": 0.2674041120596369,
+        "confusion_matrix": {
+          "tn": 81376,
+          "fp": 4122,
+          "fn": 1971,
+          "tp": 1112
+        },
+        "predicted_positive_rate": 0.0590871631614003
+      },
+      "at_threshold_0.5": {
+        "threshold": 0.5,
+        "precision": 0.09928405072026222,
+        "recall": 0.7466753162504054,
+        "f1": 0.17526361871407362,
+        "confusion_matrix": {
+          "tn": 64614,
+          "fp": 20884,
+          "fn": 781,
+          "tp": 2302
+        },
+        "predicted_positive_rate": 0.2617491335613732
+      }
+    }
+  },
+  "model": "LogisticRegression(l2, C=1.0, class_weight=balanced)",
+  "selected_threshold": 0.7899999999999999,
+  "threshold_selected_on": "val",
+  "converged": true,
+  "lbfgs_iterations": 433,
+  "notes": [
+    "PR-AUC is the headline metric: threshold-free and appropriate at 3.5% prevalence.",
+    "class_weight=balanced makes point metrics non-degenerate but destroys calibration. Brier here is NOT a fair calibration reading; see ml/calibrate.py.",
+    "Threshold selected on val and applied unchanged to test."
+  ]
+}

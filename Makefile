@@ -7,7 +7,6 @@ train:      ; python -m ml.train_lightgbm
 calibrate:  ; python -m ml.calibrate
 cost:       ; python -m ml.cost_curve
 link:       ; python -m ml.link_disputes
-link:       ; python ml/link_disputes.py
 api:        ; uvicorn app.main:app --reload
 test:       ; pytest -v
 demo:       ; python demo/run_demo.py

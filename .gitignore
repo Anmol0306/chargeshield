@@ -7,6 +7,8 @@ data/processed/
 # Artifacts
 artifacts/*.pkl
 artifacts/*.joblib
+# Reproducible from `make baseline` / `make train`. Metrics JSON IS committed.
+evaluation/preds/*.parquet
 
 # Secrets
 .env
