@@ -191,6 +191,54 @@ LLM output is an untrusted proposal. See "Policy engine".
 See [FAILURES.md](FAILURES.md).
 
 ## Evaluation
+Full output: `evaluation/metrics.json`. Charts: `pr_curve.png`,
+`error_analysis.png`.
+
+### Held-out test (final 15%, chronological)
+| Model | PR-AUC | ROC-AUC | threshold | Precision | Recall | F1 |
+|---|---|---|---|---|---|---|
+| Logistic regression | 0.223 | 0.820 | 0.79 | 0.213 | 0.361 | 0.267 |
+| LightGBM (Platt-calibrated) | **0.543** | 0.901 | 0.25 | 0.552 | 0.498 | 0.523 |
+
+Each model at its own val-selected threshold. The baseline's scores are
+rescaled by `class_weight="balanced"` and are not on the same axis as the
+calibrated LightGBM's, so only PR-AUC and ROC-AUC are directly comparable.
+
+### Policy comparison (₹ per dispute, balanced scenario, assumed 50% queue fraud)
+| Policy | Contested | ₹/dispute | vs defend-all | vs static rule |
+|---|---|---|---|---|
+| Defend none | 0.0% | 6,955 | −2,071 | −2,080 |
+| Defend all | 100.0% | 4,883 | 0 | −9 |
+| Static amount rule | 97.9% | 4,874 | +9 | 0 |
+| **ChargeShield** | 74.5% | **4,790** | **+93** | **+84** |
+
+The static amount rule is the honest adversary: it is the cost-optimal policy
+available to a merchant with **no model at all** (contest iff expected recovery
+beats the representment cost). It is a far harder baseline than defend-none or
+defend-all — note it already captures almost everything defend-all does. The
+₹84/dispute gap between it and ChargeShield is the value attributable to the ML,
+and it is deliberately reported against that harder comparator rather than
+against the flattering one.
+
+### Top failure mode
+**Recall on `ProductCD == "W"` is 0.213, against 0.703 on every other product
+type.** W is 79% of held-out transactions and carries **86% of all unrecovered
+fraud value**.
+
+The obvious reading — "the model fails when identity data is missing" — is
+**wrong, and confounded**: every W transaction lacks identity data
+(Jaccard 0.994 between the two slices). The 2×2 separates them:
+
+| | identity present | identity missing |
+|---|---|---|
+| **W** | n=0 | recall 0.213 (n=69,468) |
+| **non-W** | recall 0.703 (n=18,668) | recall 0.704 (n=445) |
+
+Non-W transactions that also lack identity data still recall at ~0.70. Identity
+missingness is not the driver; `W` is a population the model reads poorly.
+Caveat: the disambiguating cell has only 27 frauds, so this is suggestive
+rather than conclusive. Reproduced by `confound_check` in `ml/evaluate.py`.
+
 | Metric | Population | Label source |
 |---|---|---|
 | Precision, recall, PR-AUC, Brier | IEEE-CIS held-out final 15% | Real (`isFraud`) |

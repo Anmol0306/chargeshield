@@ -137,7 +137,8 @@ def prevalence_weights(y: np.ndarray, pi0: float, pi: float) -> np.ndarray:
 
 def expected_cost(df: pd.DataFrame, t: float, c: float, w: float,
                   p: np.ndarray | None = None,
-                  weights: np.ndarray | None = None) -> dict:
+                  weights: np.ndarray | None = None,
+                  contest: np.ndarray | None = None) -> dict:
     """Total expected INR cost of applying threshold t to these disputes.
 
     Contest iff p < t. Everything here is vectorised over the whole split; no
@@ -149,7 +150,11 @@ def expected_cost(df: pd.DataFrame, t: float, c: float, w: float,
     a = df["amount_inr"].to_numpy()
     q = np.ones(len(df)) if weights is None else weights
 
-    contest = p < t
+    # `contest` lets a caller price an arbitrary policy (e.g. an amount-only
+    # rule that ignores the model) through exactly this loss function, rather
+    # than reimplementing it and hoping the two stay in sync.
+    if contest is None:
+        contest = p < t
     accept = ~contest
 
     # CONTEST on a legitimate transaction: pay c, recover w of the amount.
