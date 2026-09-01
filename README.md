@@ -115,10 +115,71 @@ cannot reorder. That is asserted in code, not assumed.
 Reliability curve: `evaluation/charts/calibration.png`.
 
 ### Threshold selection
+Chosen by minimising expected INR cost per dispute on **val**, applied unchanged
+to test. Never selected on test. Disputes above the amount cap are excluded from
+the sweep, since the policy engine sends them to HUMAN_REVIEW regardless.
+
+Shipped bands (`artifacts/policy_bands.json`, balanced scenario, assumed 50%
+queue fraud rate): threshold **0.910**, review band **[0.595, 1.000]**, amount
+cap ₹25,000.
+
+The review band is derived, not guessed: it is the region where expected cost
+is within one human review (₹150) of the optimum. It came out wide — 0.405 —
+because the cost curve is genuinely flat there. That is an honest result and an
+unresolved one: as it stands the band swallows the ACCEPT action entirely,
+which contradicts the illustrative table in `docs/ARCHITECTURE.md`. Reconciling
+the two is Day 3 work, and the band was **not** narrowed by adjusting the human
+review cost to taste.
 
 ## Cost model
 Illustrative merchant assumptions, swept across three scenarios. Not Razorpay's
-figures.
+figures. Full detail in `config/costs.yaml` and `evaluation/cost_curve.json`.
+
+ChargeShield does not block transactions, so the two errors are not "blocked a
+good customer" and "missed a fraud". They are:
+
+| Error | Cost | Shape |
+|---|---|---|
+| Contest a dispute that was genuinely fraudulent | representment ops cost | fixed |
+| Accept a dispute that was legitimate and winnable | the forfeited amount | scales with the transaction |
+
+This inverts the polarity of a fraud screen: **CONTEST at low `p(fraud)`**,
+ACCEPT at high. The cost-optimal threshold is analytically amount-dependent —
+`p*(A) = 1 − c/(w·A)` — which is why the policy engine has an amount cap.
+
+### The base rate is an assumption, and it decides the answer
+Pricing every held-out transaction as a dispute gives a 3.5% fraud rate, at
+which contesting is positive-EV almost regardless of score: the optimum is
+"contest 99% of everything" and the model beats that trivial rule by ₹2 per
+dispute. **That is an artefact of the population, not a finding about the
+product** — a real chargeback queue is far more adverse, because a chargeback
+arriving is already evidence.
+
+So the sweep is repeated under prior shift (scores re-calibrated on the odds
+scale, population re-weighted):
+
+| Assumed dispute-queue fraud rate | t* | share contested | ₹ saved/dispute vs contest-all |
+|---|---|---|---|
+| 3.5% (as observed — artefactual) | 0.890 | 99.0% | 2 |
+| 20% | 0.895 | 91.8% | 27 |
+| 35% | 0.910 | 84.2% | 57 |
+| 50% | 0.910 | 74.5% | 93 |
+| 65% | 0.885 | 59.8% | 137 |
+
+Both the embarrassing result and the informative ones are reported. Shipped
+policy bands are derived at a **stated** assumed 50% queue rate, not at 3.5%.
+
+### What is assumed, not measured
+- `assumed_win_rate_if_legitimate` (0.50 / 0.70 / 0.85). Pricing a forfeited
+  winnable case is impossible without it. **No win-rate claim is made anywhere
+  in this project** — this is a stated assumption, swept, and never reported as
+  a result.
+- `assumed_dispute_fraud_rate` (0.50). IEEE-CIS has no dispute queue.
+- Rupee figures inherit the decision-region calibration error (ECE ≈ 0.048).
+- Headline figures are **per dispute**. Totals assume every held-out
+  transaction is disputed, which is false, and are labelled where they appear.
+
+Charts: `evaluation/charts/cost_curve.png`, `evaluation/charts/cost_prevalence.png`.
 
 ## AI evidence responder
 LLM output is an untrusted proposal. See "Policy engine".

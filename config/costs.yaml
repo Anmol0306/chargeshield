@@ -1,28 +1,80 @@
 # Illustrative merchant cost assumptions. NOT Razorpay figures.
-# Referenced in README under "Cost model". Sensitivity swept across all three.
+# Referenced in README under "Cost model". Sensitivity swept across all three
+# scenarios; no single scenario is presented as "the" answer.
 #
-# Source data (IEEE-CIS) is USD. Conversion stated explicitly so the
-# rupee figures are a labelled overlay, not a claim about the dataset.
+# Source data (IEEE-CIS) is USD. Conversion stated explicitly so the rupee
+# figures are a labelled overlay, not a claim about the dataset.
 currency:
   dataset: USD
   display: INR
   usd_to_inr: 88.0          # state the rate you actually use, and the date
 
-scenarios:
-  conservative:
-    fp_cost_inr: 300         # blocked legitimate txn: lost margin + friction
-    fn_cost_inr: 1000        # missed fraud: loss + chargeback fee + ops
-  balanced:
-    fp_cost_inr: 500
-    fn_cost_inr: 2000
-  high_fraud_cost:
-    fp_cost_inr: 500
-    fn_cost_inr: 4000
+# --------------------------------------------------------------------------
+# DISPUTE-DEFENCE ECONOMICS
+#
+# ChargeShield does not block transactions. The transaction has already
+# happened and a chargeback has arrived; the decision is whether to contest.
+# So the two errors are not "blocked a good customer" and "missed a fraud" --
+# they are:
+#
+#   contest a dispute that was genuinely fraudulent
+#       -> you lose the representment anyway and burn the ops cost.
+#          Roughly FIXED per dispute.
+#
+#   accept a dispute that was legitimate and winnable
+#       -> you forfeit the disputed amount.
+#          VARIABLE -- it scales with the transaction.
+#
+# This is why the polarity is inverted from a fraud screen: LOW p(fraud)
+# means CONTEST (defensible), HIGH p(fraud) means ACCEPT (contesting burns
+# cost to lose). See docs/ARCHITECTURE.md.
+#
+# (An earlier version of this file carried fp_cost_inr / fn_cost_inr keys
+# describing block-vs-allow screening economics. Those modelled a product
+# that blocks transactions, which ChargeShield is not. Replaced Sep 1.)
+# --------------------------------------------------------------------------
+dispute_economics:
+  # THE MOST ATTACKABLE NUMBER IN THIS PROJECT. Read this before quoting any
+  # rupee figure.
+  #
+  # Pricing "forfeited winnable case" is impossible without stating how often a
+  # representment actually succeeds. Real chargeback outcomes require
+  # merchant-side dispute resolution labels, which are not public and are not
+  # in IEEE-CIS. So this is an ASSUMPTION, swept across scenarios, and it is
+  # never reported as a measurement.
+  #
+  # This project makes no win-rate CLAIM. It states a win-rate ASSUMPTION and
+  # shows how the conclusion moves when it is wrong. Those are different things
+  # and the distinction is the point.
+  scenarios:
+    pessimistic:
+      representment_cost_inr: 800          # ops labour + evidence gathering + fees
+      assumed_win_rate_if_legitimate: 0.50
+    balanced:
+      representment_cost_inr: 500
+      assumed_win_rate_if_legitimate: 0.70
+    optimistic:
+      representment_cost_inr: 300
+      assumed_win_rate_if_legitimate: 0.85
 
 default_scenario: balanced
 
 # Dispute-side policy limits (deterministic, not learned)
 policy:
   auto_action_amount_cap_inr: 25000   # above this -> HUMAN_REVIEW regardless
+  human_review_cost_inr: 150          # analyst time per escalated dispute.
+                                      # Sets the width of the review band: escalate
+                                      # only where the expected-cost gap between
+                                      # CONTEST and ACCEPT is smaller than the cost
+                                      # of asking a human.
+  # Assumed fraud rate of the merchant's actual dispute queue. STATED, not
+  # measured -- IEEE-CIS has no dispute queue. The held-out split's 3.5% is the
+  # rate at which *transactions* are fraudulent, which is not the rate at which
+  # *disputed* transactions are: a chargeback arriving is already evidence.
+  # Deriving production bands from 3.5% would tune the policy engine on a
+  # population that does not exist, so the bands come from this figure and
+  # ml/cost_curve.py reports the full sensitivity around it.
+  assumed_dispute_fraud_rate: 0.50
+
   review_band_low: 0.30               # provisional; overwritten by cost_curve.py
   review_band_high: 0.70

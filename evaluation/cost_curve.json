@@ -1,0 +1,413 @@
+{
+  "created_utc": "2026-09-01T14:23:54+00:00",
+  "usd_to_inr": 88.0,
+  "default_scenario": "balanced",
+  "n_val": 80392,
+  "n_test": 80478,
+  "threshold_selected_on": "val, applied unchanged to test",
+  "scenarios": {
+    "pessimistic": {
+      "representment_cost_inr": 800.0,
+      "assumed_win_rate_if_legitimate": 0.5,
+      "threshold_selected_on_val": 0.8150000000000001,
+      "val_at_threshold": {
+        "threshold": 0.8150000000000001,
+        "total_inr": 366506060.33151114,
+        "per_dispute_inr": 4558.9867192197125,
+        "n_contested": 79489,
+        "contest_rate": 0.9887675390586128,
+        "wasted_representments": 1785,
+        "wasted_representment_cost_inr": 1428000.0,
+        "forfeited_winnable": 75,
+        "forfeited_winnable_amount_inr": 286713.15188217163
+      },
+      "test_at_threshold": {
+        "threshold": 0.8150000000000001,
+        "total_inr": 367243405.9589181,
+        "per_dispute_inr": 4563.276994444669,
+        "n_contested": 79539,
+        "contest_rate": 0.9883322150152837,
+        "wasted_representments": 1849,
+        "wasted_representment_cost_inr": 1479200.0,
+        "forfeited_winnable": 128,
+        "forfeited_winnable_amount_inr": 634937.86419487
+      },
+      "test_accept_all": {
+        "threshold": 0.0,
+        "total_inr": 589132170.0279989,
+        "per_dispute_inr": 7320.4126597082295,
+        "n_contested": 0,
+        "contest_rate": 0.0,
+        "wasted_representments": 0,
+        "wasted_representment_cost_inr": 0.0,
+        "forfeited_winnable": 77818,
+        "forfeited_winnable_amount_inr": 571674866.0023565
+      },
+      "test_contest_all": {
+        "threshold": 1.01,
+        "total_inr": 367677137.02682066,
+        "per_dispute_inr": 4568.666430910567,
+        "n_contested": 80478,
+        "contest_rate": 1.0,
+        "wasted_representments": 2660,
+        "wasted_representment_cost_inr": 2128000.0,
+        "forfeited_winnable": 0,
+        "forfeited_winnable_amount_inr": 0.0
+      },
+      "test_saving_vs_accept_all_inr": 221888764.06908083,
+      "test_saving_vs_contest_all_inr": 433731.067902565,
+      "review_band": {
+        "low": 0.085,
+        "high": 1.0,
+        "derived_from_human_review_cost_inr": 150
+      },
+      "analytic_threshold_examples": {
+        "INR_500": 0.0,
+        "INR_2,000": 0.19999999999999996,
+        "INR_6,070": 0.7364085667215816,
+        "INR_25,000": 0.9359999999999999,
+        "INR_100,000": 0.984
+      }
+    },
+    "balanced": {
+      "representment_cost_inr": 500.0,
+      "assumed_win_rate_if_legitimate": 0.7,
+      "threshold_selected_on_val": 0.89,
+      "val_at_threshold": {
+        "threshold": 0.89,
+        "total_inr": 229183863.8864128,
+        "per_dispute_inr": 2850.8292353270576,
+        "n_contested": 79594,
+        "contest_rate": 0.9900736391680764,
+        "wasted_representments": 1868,
+        "wasted_representment_cost_inr": 934000.0,
+        "forfeited_winnable": 53,
+        "forfeited_winnable_amount_inr": 200869.67959213257
+      },
+      "test_at_threshold": {
+        "threshold": 0.89,
+        "total_inr": 229074079.92863372,
+        "per_dispute_inr": 2846.418647687986,
+        "n_contested": 79676,
+        "contest_rate": 0.9900345436019782,
+        "wasted_representments": 1946,
+        "wasted_representment_cost_inr": 973000.0,
+        "forfeited_winnable": 88,
+        "forfeited_winnable_amount_inr": 394737.288977623
+      },
+      "test_accept_all": {
+        "threshold": 0.0,
+        "total_inr": 589132170.0279989,
+        "per_dispute_inr": 7320.4126597082295,
+        "n_contested": 0,
+        "contest_rate": 0.0,
+        "wasted_representments": 0,
+        "wasted_representment_cost_inr": 0.0,
+        "forfeited_winnable": 77818,
+        "forfeited_winnable_amount_inr": 571674866.0023565
+      },
+      "test_contest_all": {
+        "threshold": 1.01,
+        "total_inr": 229198763.82634938,
+        "per_dispute_inr": 2847.967939391503,
+        "n_contested": 80478,
+        "contest_rate": 1.0,
+        "wasted_representments": 2660,
+        "wasted_representment_cost_inr": 1330000.0,
+        "forfeited_winnable": 0,
+        "forfeited_winnable_amount_inr": 0.0
+      },
+      "test_saving_vs_accept_all_inr": 360058090.09936523,
+      "test_saving_vs_contest_all_inr": 124683.89771565795,
+      "review_band": {
+        "low": 0.13,
+        "high": 1.0,
+        "derived_from_human_review_cost_inr": 150
+      },
+      "analytic_threshold_examples": {
+        "INR_500": 0.0,
+        "INR_2,000": 0.6428571428571428,
+        "INR_6,070": 0.8823252530007061,
+        "INR_25,000": 0.9714285714285714,
+        "INR_100,000": 0.9928571428571429
+      }
+    },
+    "optimistic": {
+      "representment_cost_inr": 300.0,
+      "assumed_win_rate_if_legitimate": 0.85,
+      "threshold_selected_on_val": 0.93,
+      "val_at_threshold": {
+        "threshold": 0.93,
+        "total_inr": 128142359.3672556,
+        "per_dispute_inr": 1593.9690437761917,
+        "n_contested": 79685,
+        "contest_rate": 0.9912055925962783,
+        "wasted_representments": 1944,
+        "wasted_representment_cost_inr": 583200.0,
+        "forfeited_winnable": 38,
+        "forfeited_winnable_amount_inr": 158283.223777771
+      },
+      "test_at_threshold": {
+        "threshold": 0.93,
+        "total_inr": 127374686.24750306,
+        "per_dispute_inr": 1582.7267855501261,
+        "n_contested": 79768,
+        "contest_rate": 0.9911777131638461,
+        "wasted_representments": 2020,
+        "wasted_representment_cost_inr": 606000.0,
+        "forfeited_winnable": 70,
+        "forfeited_winnable_amount_inr": 277355.6723613739
+      },
+      "test_accept_all": {
+        "threshold": 0.0,
+        "total_inr": 589132170.0279989,
+        "per_dispute_inr": 7320.4126597082295,
+        "n_contested": 0,
+        "contest_rate": 0.0,
+        "wasted_representments": 0,
+        "wasted_representment_cost_inr": 0.0,
+        "forfeited_winnable": 77818,
+        "forfeited_winnable_amount_inr": 571674866.0023565
+      },
+      "test_contest_all": {
+        "threshold": 1.01,
+        "total_inr": 127351933.92599589,
+        "per_dispute_inr": 1582.4440707522042,
+        "n_contested": 80478,
+        "contest_rate": 1.0,
+        "wasted_representments": 2660,
+        "wasted_representment_cost_inr": 798000.0,
+        "forfeited_winnable": 0,
+        "forfeited_winnable_amount_inr": 0.0
+      },
+      "test_saving_vs_accept_all_inr": 461757483.7804959,
+      "test_saving_vs_contest_all_inr": -22752.321507170796,
+      "review_band": {
+        "low": 0.155,
+        "high": 1.0,
+        "derived_from_human_review_cost_inr": 150
+      },
+      "analytic_threshold_examples": {
+        "INR_500": 0.2941176470588235,
+        "INR_2,000": 0.8235294117647058,
+        "INR_6,070": 0.9418548308944665,
+        "INR_25,000": 0.9858823529411764,
+        "INR_100,000": 0.9964705882352941
+      }
+    }
+  },
+  "threshold_spread_across_scenarios": 0.11499999999999999,
+  "prevalence_sensitivity": {
+    "as_observed": {
+      "assumed_dispute_fraud_rate": 0.03305251124530928,
+      "is_as_observed": true,
+      "threshold_selected_on_val": 0.89,
+      "test": {
+        "threshold": 0.89,
+        "total_inr": 229074079.92863372,
+        "per_dispute_inr": 2846.418647687986,
+        "n_contested": 79676,
+        "contest_rate": 0.9900345436019782,
+        "wasted_representments": 1946,
+        "wasted_representment_cost_inr": 973000.0,
+        "forfeited_winnable": 88,
+        "forfeited_winnable_amount_inr": 394737.288977623
+      },
+      "test_contest_all": {
+        "threshold": 1.01,
+        "total_inr": 229198763.82634938,
+        "per_dispute_inr": 2847.967939391503,
+        "n_contested": 80478,
+        "contest_rate": 1.0,
+        "wasted_representments": 2660,
+        "wasted_representment_cost_inr": 1330000.0,
+        "forfeited_winnable": 0,
+        "forfeited_winnable_amount_inr": 0.0
+      },
+      "test_accept_all": {
+        "threshold": 0.0,
+        "total_inr": 589132170.0279989,
+        "per_dispute_inr": 7320.4126597082295,
+        "n_contested": 0,
+        "contest_rate": 0.0,
+        "wasted_representments": 0,
+        "wasted_representment_cost_inr": 0.0,
+        "forfeited_winnable": 77818,
+        "forfeited_winnable_amount_inr": 571674866.0023565
+      },
+      "edge_over_contest_all_inr_per_dispute": 1.5492917035171558,
+      "edge_over_accept_all_inr_per_dispute": 4473.994012020244
+    },
+    "0.20": {
+      "assumed_dispute_fraud_rate": 0.2,
+      "is_as_observed": false,
+      "threshold_selected_on_val": 0.895,
+      "test": {
+        "threshold": 0.895,
+        "total_inr": 285569314.3666052,
+        "per_dispute_inr": 3548.414652036647,
+        "n_contested": 79118,
+        "contest_rate": 0.9184498763936753,
+        "wasted_representments": 1619,
+        "wasted_representment_cost_inr": 4898266.240601503,
+        "forfeited_winnable": 319,
+        "forfeited_winnable_amount_inr": 1551724.4332244669
+      },
+      "test_contest_all": {
+        "threshold": 1.01,
+        "total_inr": 287764602.68714297,
+        "per_dispute_inr": 3575.6927692927634,
+        "n_contested": 80478,
+        "contest_rate": 1.0,
+        "wasted_representments": 2660,
+        "wasted_representment_cost_inr": 8047799.999999999,
+        "forfeited_winnable": 0,
+        "forfeited_winnable_amount_inr": 0.0
+      },
+      "test_accept_all": {
+        "threshold": 0.0,
+        "total_inr": 578606585.5579066,
+        "per_dispute_inr": 7189.62431419651,
+        "n_contested": 0,
+        "contest_rate": 0.0,
+        "wasted_representments": 0,
+        "wasted_representment_cost_inr": 0.0,
+        "forfeited_winnable": 77818,
+        "forfeited_winnable_amount_inr": 472972832.6725195
+      },
+      "edge_over_contest_all_inr_per_dispute": 27.278117256116275,
+      "edge_over_accept_all_inr_per_dispute": 3641.2096621598625
+    },
+    "0.35": {
+      "assumed_dispute_fraud_rate": 0.35,
+      "is_as_observed": false,
+      "threshold_selected_on_val": 0.91,
+      "test": {
+        "threshold": 0.91,
+        "total_inr": 335836698.0548895,
+        "per_dispute_inr": 4173.024901897281,
+        "n_contested": 78757,
+        "contest_rate": 0.8420663565864208,
+        "wasted_representments": 1495,
+        "wasted_representment_cost_inr": 7915434.86842105,
+        "forfeited_winnable": 556,
+        "forfeited_winnable_amount_inr": 2580849.169792007
+      },
+      "test_contest_all": {
+        "threshold": 1.01,
+        "total_inr": 340385195.5133541,
+        "per_dispute_inr": 4229.54342197065,
+        "n_contested": 80478,
+        "contest_rate": 1.0,
+        "wasted_representments": 2660,
+        "wasted_representment_cost_inr": 14083649.999999998,
+        "forfeited_winnable": 0,
+        "forfeited_winnable_amount_inr": 0.0
+      },
+      "test_accept_all": {
+        "threshold": 0.0,
+        "total_inr": 569149494.0958495,
+        "per_dispute_inr": 7072.1128022049415,
+        "n_contested": 0,
+        "contest_rate": 0.0,
+        "wasted_representments": 0,
+        "wasted_representment_cost_inr": 0.0,
+        "forfeited_winnable": 77818,
+        "forfeited_winnable_amount_inr": 384290426.5464221
+      },
+      "edge_over_contest_all_inr_per_dispute": 56.51852007336947,
+      "edge_over_accept_all_inr_per_dispute": 2899.0879003076607
+    },
+    "0.50": {
+      "assumed_dispute_fraud_rate": 0.5,
+      "is_as_observed": false,
+      "threshold_selected_on_val": 0.91,
+      "test": {
+        "threshold": 0.91,
+        "total_inr": 385513021.5550977,
+        "per_dispute_inr": 4790.290782016174,
+        "n_contested": 78168,
+        "contest_rate": 0.7447925243729488,
+        "wasted_representments": 1336,
+        "wasted_representment_cost_inr": 10105132.330827065,
+        "forfeited_winnable": 986,
+        "forfeited_winnable_amount_inr": 3966466.896127813
+      },
+      "test_contest_all": {
+        "threshold": 1.01,
+        "total_inr": 393005788.33956516,
+        "per_dispute_inr": 4883.394074648539,
+        "n_contested": 80478,
+        "contest_rate": 1.0,
+        "wasted_representments": 2660,
+        "wasted_representment_cost_inr": 20119499.999999996,
+        "forfeited_winnable": 0,
+        "forfeited_winnable_amount_inr": 0.0
+      },
+      "test_accept_all": {
+        "threshold": 0.0,
+        "total_inr": 559692402.6337925,
+        "per_dispute_inr": 6954.601290213381,
+        "n_contested": 0,
+        "contest_rate": 0.0,
+        "wasted_representments": 0,
+        "wasted_representment_cost_inr": 0.0,
+        "forfeited_winnable": 77818,
+        "forfeited_winnable_amount_inr": 295608020.4203247
+      },
+      "edge_over_contest_all_inr_per_dispute": 93.10329263236508,
+      "edge_over_accept_all_inr_per_dispute": 2164.310508197207
+    },
+    "0.65": {
+      "assumed_dispute_fraud_rate": 0.65,
+      "is_as_observed": false,
+      "threshold_selected_on_val": 0.885,
+      "test": {
+        "threshold": 0.885,
+        "total_inr": 434564295.0113096,
+        "per_dispute_inr": 5399.789942733539,
+        "n_contested": 76511,
+        "contest_rate": 0.5983765618909902,
+        "wasted_representments": 1060,
+        "wasted_representment_cost_inr": 10422808.64661654,
+        "forfeited_winnable": 2367,
+        "forfeited_winnable_amount_inr": 7284056.245145423
+      },
+      "test_contest_all": {
+        "threshold": 1.01,
+        "total_inr": 445626381.1657763,
+        "per_dispute_inr": 5537.24472732643,
+        "n_contested": 80478,
+        "contest_rate": 1.0,
+        "wasted_representments": 2660,
+        "wasted_representment_cost_inr": 26155349.999999993,
+        "forfeited_winnable": 0,
+        "forfeited_winnable_amount_inr": 0.0
+      },
+      "test_accept_all": {
+        "threshold": 0.0,
+        "total_inr": 550235311.1717354,
+        "per_dispute_inr": 6837.089778221818,
+        "n_contested": 0,
+        "contest_rate": 0.0,
+        "wasted_representments": 0,
+        "wasted_representment_cost_inr": 0.0,
+        "forfeited_winnable": 77818,
+        "forfeited_winnable_amount_inr": 206925614.2942272
+      },
+      "edge_over_contest_all_inr_per_dispute": 137.45478459289097,
+      "edge_over_accept_all_inr_per_dispute": 1437.2998354882793
+    }
+  },
+  "n_excluded_above_amount_cap": 8103,
+  "auto_action_amount_cap_inr": 25000,
+  "notes": [
+    "Dispute-defence economics: CONTEST iff p(fraud) < t. Inverted relative to a fraud screen -- see config/costs.yaml.",
+    "assumed_win_rate_if_legitimate is an ASSUMPTION, not a measurement. Real chargeback outcomes are not in IEEE-CIS and are not public. No win-rate claim is made anywhere in this project; the parameter is swept so the reader can see how much it matters.",
+    "Rupees PER DISPUTE is the headline. Totals assume every held-out transaction becomes a dispute, which is false in reality and is why they are labelled rather than quoted.",
+    "The cost-optimal threshold is analytically amount-dependent: p*(A) = 1 - c/(w*A). A single global threshold is an approximation the policy engine's amount cap partly compensates for.",
+    "Calibration in the decision region is ECE ~0.048 (see evaluation/calibration_metrics.json). These rupee figures inherit that error.",
+    "Disputes above the amount cap are excluded from the sweep: the policy engine sends them to HUMAN_REVIEW regardless, so the threshold never governs them.",
+    "AS-OBSERVED IS AN ARTEFACT. Scoring every held-out transaction as a dispute gives a 3.5% fraud queue, at which contesting is positive-EV almost regardless of score and no threshold earns its keep. prevalence_sensitivity re-calibrates (prior shift on the odds) and re-weights to adverse queue compositions, which is where the decision actually has content."
+  ]
+}

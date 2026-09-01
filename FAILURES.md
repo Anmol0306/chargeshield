@@ -57,3 +57,37 @@ output can decrease as the model score increases" is not a sentence worth
 having to explain in a panel, and the cost of the fix was one cast. Storage
 precision and arithmetic precision are separate decisions, and letting the
 first silently set the second is how you get results that are *almost* right.
+
+---
+
+## Failure 03 — The first cost curve said the product was unnecessary
+*Sep 1, `ml/cost_curve.py`*
+
+**Problem:** The first working sweep returned a cost-optimal policy of "contest
+99% of disputes", beating the trivial contest-everything rule by ₹37,433 out of
+₹394M — about 0.01%. Taken at face value: the model adds nothing and a merchant
+should just contest every chargeback.
+
+**Cause:** Not the loss function — the population. I was pricing every held-out
+transaction as though it were a dispute, so the fraud base rate was 3.5%. Real
+dispute queues are nothing like that: a chargeback arriving is already strong
+evidence something went wrong. At 3.5% fraud, a median ₹6,028 dispute and a
+₹500 representment cost, contesting is positive-EV almost regardless of score,
+so no threshold can have content. The degeneracy was an artefact of the
+population, not a property of the product.
+
+**Fix:** Added a prior-shift sensitivity — re-calibrate the scores on the odds
+scale and re-weight the population to assumed dispute-queue fraud rates of
+20/35/50/65%. The model's edge over contest-everything rises ₹2 → ₹137 per
+dispute and the contest rate falls 99% → 60%. Production bands are now derived
+at a stated assumed queue rate (50%), not at the artefactual 3.5%. Also
+excluded disputes above the amount cap from the sweep, since the policy engine
+never decides those automatically.
+
+**Lesson:** The arithmetic was correct and the answer was still meaningless,
+which is the most dangerous combination — nothing fails, no test goes red, and
+the number is simply about the wrong thing. Both the as-observed result and the
+shifted ones are reported: deleting the embarrassing one and keeping the
+flattering one would have been the easy move and the dishonest one. A
+base-rate-dependent conclusion needs its base rate stated as an assumption and
+swept, not inherited by accident from whatever data was lying around.
