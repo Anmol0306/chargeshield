@@ -60,6 +60,14 @@ VAL_FIT_FRACTION = 0.70
 N_BINS = 15
 EPS = 1e-6
 
+# Aggregate ECE is close to meaningless for this application: 92% of test rows
+# score below 0.05, so an overall ECE is almost entirely a measurement of the
+# region where no decision is ever made. Every reported calibration number is
+# therefore also reported restricted to scores at or above this floor -- the
+# band where the policy engine actually chooses between CONTEST, ACCEPT and
+# HUMAN_REVIEW.
+DECISION_REGION_MIN = 0.10
+
 
 def expected_calibration_error(y_true, y_prob, n_bins=N_BINS) -> float:
     """Bin-weighted mean gap between predicted confidence and observed frequency.
@@ -161,6 +169,34 @@ class IdentityCalibrator:
         return {}
 
 
+def decision_region(y, p, lo=DECISION_REGION_MIN) -> dict:
+    """Calibration where the decisions are, plus the portfolio-level bias.
+
+    `expected_frauds` vs `actual_frauds` IS the cost-curve arithmetic: expected
+    loss is a sum of p x loss. A bias that points consistently in one direction
+    does not cancel across a portfolio, which is why signed relative bias is
+    reported alongside the unsigned ECE -- ECE treats +0.05 and -0.05 as equally
+    bad, and for summed expected loss they are not.
+    """
+    m = p >= lo
+    out = {
+        "floor": float(lo),
+        "n": int(m.sum()),
+        "share_of_rows": float(m.mean()),
+        "expected_frauds_all": float(p.sum()),
+        "actual_frauds_all": int(y.sum()),
+        "relative_bias_all": float((p.sum() - y.sum()) / y.sum()),
+    }
+    if m.any():
+        out |= {
+            "ece": expected_calibration_error(y[m], p[m]),
+            "expected_frauds": float(p[m].sum()),
+            "actual_frauds": int(y[m].sum()),
+            "relative_bias": float((p[m].sum() - y[m].sum()) / max(y[m].sum(), 1)),
+        }
+    return out
+
+
 def score(y, p) -> dict:
     return {
         "brier": float(brier_score_loss(y, p)),
@@ -234,8 +270,11 @@ def main() -> None:
     print("-" * 56)
     for cal in candidates:
         cal.fit(p_fit, y_fit)
-        s = score(y_pick, cal.predict(p_pick))
-        results[cal.name] = {"val_pick": s, "params": cal.params()}
+        p_cal = cal.predict(p_pick)
+        s = score(y_pick, p_cal)
+        results[cal.name] = {"val_pick": s,
+                             "val_pick_decision_region": decision_region(y_pick, p_cal),
+                             "params": cal.params()}
         print(f"{cal.name:>14} | {s['brier']:9.6f} {s['log_loss']:9.5f} "
               f"{s['ece']:7.4f} {s['roc_auc']:8.5f}")
 
@@ -266,6 +305,8 @@ def main() -> None:
 
     test_before = score(y_test, p_test_raw)
     test_after = score(y_test, p_test_cal)
+    region_before = decision_region(y_test, p_test_raw)
+    region_after = decision_region(y_test, p_test_cal)
 
     out = pd.DataFrame({
         "TransactionID": test["TransactionID"],
@@ -297,6 +338,8 @@ def main() -> None:
         "test": {
             "uncalibrated": test_before,
             "calibrated": test_after,
+            "uncalibrated_decision_region": region_before,
+            "calibrated_decision_region": region_after,
             **ranking_metrics(y_test, p_test_cal),
             "at_threshold": point_metrics(y_test, p_test_cal, threshold),
         },
@@ -311,6 +354,15 @@ def main() -> None:
             "Test is scored once, with the winner only.",
             "Brier chosen over ECE for selection: ECE alone is gamed by a model "
             "that predicts the base rate for everything.",
+            f"92% of test rows score below 0.05, so AGGREGATE ECE mostly measures "
+            f"the region where no decision is made. Report the p>={DECISION_REGION_MIN} "
+            f"figures: that is where the policy engine acts, and calibration is "
+            f"roughly 10x worse there.",
+            "Platt was kept despite over-predicting by 14% inside the decision "
+            "region, because uncalibrated under-predicts total fraud by 19.3% "
+            "portfolio-wide, which distorts summed expected loss far more. The "
+            "residual bias also errs toward ACCEPT (do not contest), the "
+            "conservative direction for a defence-only product.",
         ],
     }
     (EVAL_DIR / "calibration_metrics.json").write_text(json.dumps(metrics, indent=2))
@@ -333,6 +385,18 @@ def main() -> None:
               f"{s['ece']:7.4f} {s['roc_auc']:8.5f}")
     print(f"\nmean predicted {test_after['mean_predicted']:.4f} vs "
           f"observed fraud rate {test_after['observed_rate']:.4f}")
+
+    print(f"\n--- calibration where the DECISIONS are (p >= {DECISION_REGION_MIN}) ---")
+    print("92% of rows score below 0.05, so the aggregate ECE above is mostly a")
+    print("measurement of the region where nothing is ever decided.")
+    print(f"{'':>14} | {'n':>7} {'ECE':>7} {'expected':>9} {'actual':>7} {'bias':>8}")
+    print("-" * 60)
+    for label, r in (("uncalibrated", region_before), (winner.name, region_after)):
+        print(f"{label:>14} | {r['n']:7,} {r['ece']:7.4f} {r['expected_frauds']:9.1f} "
+              f"{r['actual_frauds']:7,} {r['relative_bias']:+8.1%}")
+    print(f"{'':>14} | portfolio-wide:  expected {region_before['expected_frauds_all']:.0f} "
+          f"(raw) / {region_after['expected_frauds_all']:.0f} ({winner.name}) "
+          f"vs actual {region_after['actual_frauds_all']:,}")
     p = metrics["test"]["at_threshold"]
     cm = p["confusion_matrix"]
     print(f"@t={threshold:.2f}  P {p['precision']:.4f}  R {p['recall']:.4f}  "

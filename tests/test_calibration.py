@@ -86,3 +86,40 @@ def test_ece_detects_a_miscalibrated_predictor():
     y = (rng.uniform(size=p.size) < p).astype(int)
     # Halve every probability: ranking is untouched, calibration is destroyed.
     assert expected_calibration_error(y, p * 0.5) > 0.10
+
+
+def test_decision_region_metrics_are_reported(val_preds):
+    """The aggregate ECE flatters the model because 92% of rows score below
+    0.05. If the decision-region figures stop being computed, the reported
+    calibration claim silently becomes the flattering one."""
+    from ml.calibrate import DECISION_REGION_MIN, decision_region
+
+    y = val_preds["isFraud"].to_numpy()
+    p = val_preds["p_fraud"].to_numpy()
+    r = decision_region(y, p)
+
+    assert r["floor"] == DECISION_REGION_MIN
+    assert 0 < r["n"] < len(p), "decision region is empty or is the whole population"
+    assert r["share_of_rows"] < 0.25, (
+        "if most rows are in the decision region, the premise of reporting it "
+        "separately no longer holds — recheck the score distribution"
+    )
+    for k in ("ece", "expected_frauds", "actual_frauds", "relative_bias",
+              "relative_bias_all"):
+        assert k in r
+
+
+def test_relative_bias_has_the_right_sign():
+    """Signed bias, not just unsigned ECE: a consistent-direction error does not
+    cancel when expected losses are summed across a portfolio."""
+    from ml.calibrate import decision_region
+
+    y = np.zeros(1000, dtype=int)
+    y[:100] = 1                      # 10% actually fraud
+    p = np.full(1000, 0.5)           # model claims 50% for everything
+    r = decision_region(y, p)
+    assert r["relative_bias"] > 0, "over-prediction must report positive bias"
+
+    p = np.full(1000, 0.02)
+    r = decision_region(y, p)
+    assert r["relative_bias_all"] < 0, "under-prediction must report negative bias"

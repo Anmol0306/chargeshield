@@ -86,12 +86,28 @@ both). Fitting and choosing on the same slice would always select isotonic.
 | Uncalibrated | 0.02205 | 0.09259 | 0.0077 | 0.9014 |
 | Platt (selected) | 0.02214 | 0.09233 | **0.0050** | 0.9014 |
 
-**The honest reading: LightGBM's raw output was already close to calibrated.**
-Platt halves the calibration gap (0.77 → 0.50 percentage points) and improves
-log loss, but Brier is a wash. Calibration here was worth verifying more than
-it was worth applying — which is the finding, not a disappointment. Mean
-predicted probability on test is 0.0365 against an observed fraud rate of
-0.0348, a ~5% relative over-prediction.
+**Those aggregate numbers flatter the model, and the reliability plot is why.**
+92% of test rows score below 0.05, so an overall ECE is mostly a measurement of
+the region where no decision is ever made. Restricted to `p >= 0.10` — the band
+where the policy engine actually chooses between CONTEST, ACCEPT and
+HUMAN_REVIEW — calibration is roughly **ten times worse**:
+
+| On test, p ≥ 0.10 | n | ECE | expected frauds | actual | bias |
+|---|---|---|---|---|---|
+| Uncalibrated | 4,011 | 0.0512 | 1,644 | 1,762 | −6.7% |
+| Platt (selected) | 5,748 | 0.0478 | 2,244 | 1,969 | **+14.0%** |
+
+Platt was kept anyway, and the reason is portfolio-level: summed across all
+transactions the uncalibrated model expects 2,489 frauds against an actual
+3,083 — **under-predicting total fraud by 19.3%**, which distorts summed
+expected loss far more than a 14% over-count confined to 5,748 rows. Platt
+lands at +4.8% portfolio-wide. The residual bias also errs toward ACCEPT
+(don't contest), the conservative direction for a defence-only product.
+
+**Stated plainly: the number to quote is ECE 0.048 in the decision region, not
+0.005 overall.** Calibration was worth verifying more than it was worth
+applying, and the remaining miscalibration is a known limitation of the cost
+figures rather than something the cost figures hide.
 
 ROC-AUC is identical before and after because Platt is strictly monotonic and
 cannot reorder. That is asserted in code, not assumed.

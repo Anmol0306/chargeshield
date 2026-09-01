@@ -52,6 +52,30 @@
       "mean_predicted": 0.036476115379174036,
       "observed_rate": 0.03480430340592226
     },
+    "uncalibrated_decision_region": {
+      "floor": 0.1,
+      "n": 4011,
+      "share_of_rows": 0.045280590645849564,
+      "expected_frauds_all": 2488.695068359375,
+      "actual_frauds_all": 3083,
+      "relative_bias_all": -0.1927683852223889,
+      "ece": 0.051207616754346166,
+      "expected_frauds": 1644.337158203125,
+      "actual_frauds": 1762,
+      "relative_bias": -0.06677800328994041
+    },
+    "calibrated_decision_region": {
+      "floor": 0.1,
+      "n": 5748,
+      "share_of_rows": 0.06488976191282556,
+      "expected_frauds_all": 3231.090776402615,
+      "actual_frauds_all": 3083,
+      "relative_bias_all": 0.048034633928840456,
+      "ece": 0.0478399118418021,
+      "expected_frauds": 2243.983813266678,
+      "actual_frauds": 1969,
+      "relative_bias": 0.13965658368038508
+    },
     "pr_auc": 0.5430998586781586,
     "roc_auc": 0.9014055557135869,
     "brier": 0.022144264196031015,
@@ -73,11 +97,13 @@
   },
   "selected_threshold": 0.24999999999999994,
   "threshold_selected_on": "val_pick (post-calibration)",
-  "created_utc": "2026-09-01T13:37:09+00:00",
+  "created_utc": "2026-09-01T13:39:40+00:00",
   "notes": [
     "val does three jobs: early stopping, calibrator fitting, method selection. It is NOT a held-out estimate and is never reported as one.",
     "Calibrators are fit on val_fit and chosen on val_pick, a chronologically later slice neither of them saw.",
     "Test is scored once, with the winner only.",
-    "Brier chosen over ECE for selection: ECE alone is gamed by a model that predicts the base rate for everything."
+    "Brier chosen over ECE for selection: ECE alone is gamed by a model that predicts the base rate for everything.",
+    "92% of test rows score below 0.05, so AGGREGATE ECE mostly measures the region where no decision is made. Report the p>=0.1 figures: that is where the policy engine acts, and calibration is roughly 10x worse there.",
+    "Platt was kept despite over-predicting by 14% inside the decision region, because uncalibrated under-predicts total fraud by 19.3% portfolio-wide, which distorts summed expected loss far more. The residual bias also errs toward ACCEPT (do not contest), the conservative direction for a defence-only product."
   ]
 }
