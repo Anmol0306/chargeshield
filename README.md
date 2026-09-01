@@ -36,7 +36,41 @@ All three splits come from `train_transaction.csv` — the competition's
 `test_transaction.csv` has no labels.
 
 ### Data leakage controls
+Structural, not disciplinary. Every learned transform is fit on train and only
+on train, and the fitted object is the sole path from raw row to model input.
+
+- Baseline: one sklearn `Pipeline`. `.fit` is called once; val/test only ever
+  reach `.predict_proba`.
+- LightGBM: one `CategoricalDtype` per categorical column, learned on train and
+  applied unchanged to val/test. Per-split `.astype("category")` would assign
+  integer codes per frame and silently scramble categories at inference.
+- `tests/test_preprocessing.py` and `tests/test_lightgbm_encoding.py` assert
+  both, including that the naive version would genuinely differ on this data —
+  a leakage test that cannot fail is not a test.
+- The operating threshold is selected on val and applied unchanged to test.
+  Picking it on test is a second, subtler leak than the split itself.
+
 ### Model
+| Model | Features | Test PR-AUC | Test ROC-AUC | Precision | Recall |
+|---|---|---|---|---|---|
+| Logistic regression (baseline) | 46 in → 97 | 0.223 | 0.820 | 0.213 | 0.361 |
+| LightGBM (primary) | 392 | **0.543** | 0.901 | 0.553 | 0.497 |
+
+The baseline is a deliberate floor, not a weak attempt. It uses a constrained
+starter feature set, one-hot encodes the manageable low-cardinality
+categoricals, and deliberately excludes high-cardinality identifier fields to
+control dimensionality — `card1` alone would add ~12,242 dummy columns, and an
+anonymised code carries no ordinal meaning a linear model can use.
+
+LightGBM receives exactly what the baseline was denied: those 7 identifier
+columns plus the 339 V-columns. So the gap is not "one algorithm beat another";
+it measures what the constraint cost. Four of the tree's top eight features by
+gain — `DeviceInfo`, `card2`, `card1`, `addr1` — are columns the baseline
+excluded, which is the direct evidence for that reading.
+
+Val metrics are reported but are a **selection** estimate: early stopping and
+the threshold sweep both read val. Test is the number quoted.
+
 ### Calibration
 ### Threshold selection
 

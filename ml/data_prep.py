@@ -42,6 +42,8 @@ from ml.features import (
     STARTER_IDENTITY_COLS,
     STARTER_TRANSACTION_COLS,
     TARGET_COL,
+    V_COLS,
+    model_input_columns,
 )
 
 RAW_DIR = Path("data/raw")
@@ -66,8 +68,14 @@ def downcast(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_raw() -> pd.DataFrame:
-    tx_cols = ID_COLS + [TARGET_COL] + STARTER_TRANSACTION_COLS
-    tx = pd.read_csv(RAW_DIR / "train_transaction.csv", usecols=tx_cols)
+    tx_cols = ID_COLS + [TARGET_COL] + model_input_columns()
+    # dtype hint on the V columns: 339 x 590,540 parsed as float64 is a ~1.6GB
+    # transient we would immediately downcast away. Ask for float32 on read.
+    tx = pd.read_csv(
+        RAW_DIR / "train_transaction.csv",
+        usecols=tx_cols,
+        dtype={c: "float32" for c in V_COLS},
+    )
 
     id_cols = ["TransactionID"] + STARTER_IDENTITY_COLS
     identity = pd.read_csv(RAW_DIR / "train_identity.csv", usecols=id_cols)
@@ -122,7 +130,9 @@ def main() -> None:
     print(f"Written to {OUT_DIR}/")
 
     meta = {"starter_transaction_cols": STARTER_TRANSACTION_COLS,
-             "starter_identity_cols": STARTER_IDENTITY_COLS}
+            "starter_identity_cols": STARTER_IDENTITY_COLS,
+            "v_cols": V_COLS,
+            "n_v_cols": len(V_COLS)}
     Path("artifacts").mkdir(exist_ok=True)
     with open("artifacts/prep_metadata.json", "w") as f:
         json.dump(meta, f, indent=2)

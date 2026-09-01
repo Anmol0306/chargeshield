@@ -1,6 +1,6 @@
 {
   "model": "baseline_logistic_regression",
-  "created_utc": "2026-09-01T12:23:57+00:00",
+  "created_utc": "2026-09-01T13:06:59+00:00",
   "feature_policy": "We use a constrained starter feature set, one-hot encode the manageable low-cardinality categorical features, and deliberately exclude high-cardinality identifier fields from the first linear baseline to control dimensionality and avoid unnecessary complexity. card1 alone would add ~12,000 dummy columns, and the numeric magnitude of an anonymised code carries no ordinal meaning a linear model can use. Those columns are left for the gradient-boosted model, which splits on them natively.",
   "features": [
     "amt__TransactionAmt",

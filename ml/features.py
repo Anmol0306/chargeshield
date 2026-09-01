@@ -52,6 +52,13 @@ STARTER_TRANSACTION_COLS = [
 
 STARTER_IDENTITY_COLS = ["id_01", "id_02", "DeviceType", "DeviceInfo"]
 
+# The 339 anonymised engineered features. Skipped on day one (see above); added
+# for the gradient-boosted model, which is the point of having one. Kept as a
+# separate constant rather than folded into STARTER_TRANSACTION_COLS so the
+# baseline's feature partition below stays exactly as it was when the baseline
+# was trained — the baseline is a frozen reference point, not a moving target.
+V_COLS = [f"V{i}" for i in range(1, 340)]
+
 
 # --------------------------------------------------------------------------
 # Baseline feature partition.
@@ -150,3 +157,60 @@ _assert_partition_is_total()
 def baseline_feature_columns() -> list[str]:
     """Input columns the baseline pipeline consumes. Excludes ID cols and target."""
     return BASELINE_NUMERIC_COLS + BASELINE_CATEGORICAL_COLS
+
+
+# --------------------------------------------------------------------------
+# Gradient-boosted model feature set.
+#
+# Deliberately the complement of the baseline's constraint: the tree gets
+# everything the linear model was denied. The baseline is not a worse algorithm
+# on the same data — it is a constrained model, and the gap between them
+# measures what the constraint cost.
+#
+# No one-hot and no imputation here. LightGBM learns a default direction for
+# NaN at each split, which is strictly better than median-imputation when
+# missingness is structural (see the drift note above), and native categorical
+# splits beat one-hot for trees.
+# --------------------------------------------------------------------------
+
+# Passed to LightGBM as pandas `category` dtype.
+#
+# card1/card2/card3/card5/addr1/addr2 are NOT here on purpose. They stay
+# numeric: card1 has 12,242 levels, and LightGBM's categorical splitter
+# overfits badly at that cardinality, whereas a tree can carve an arbitrary
+# partition of a numeric axis given enough splits. DeviceInfo IS here because
+# it is a string and has no numeric fallback.
+LGBM_CATEGORICAL_COLS = [
+    "ProductCD", "card4", "card6",
+    "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9",
+    "DeviceType",
+    "DeviceInfo",   # 1,546 levels — the only high-cardinality string
+]
+
+
+def lightgbm_feature_columns() -> list[str]:
+    """Everything except the identifiers and the target. ~392 columns."""
+    return STARTER_TRANSACTION_COLS + STARTER_IDENTITY_COLS + V_COLS
+
+
+def model_input_columns() -> list[str]:
+    """Every column data_prep must read from the raw CSVs."""
+    return STARTER_TRANSACTION_COLS + V_COLS
+
+
+def _assert_lgbm_set_is_sane() -> None:
+    cols = lightgbm_feature_columns()
+    assert len(cols) == len(set(cols)), "duplicate column in the LightGBM feature set"
+    assert TARGET_COL not in cols, "target leaked into the LightGBM feature set"
+    assert not set(ID_COLS) & set(cols), "identifier columns leaked into features"
+    missing = set(LGBM_CATEGORICAL_COLS) - set(cols)
+    assert not missing, f"categorical column not in the feature set: {sorted(missing)}"
+    # The baseline exclusions must still be absent from the BASELINE set only —
+    # the tree is expected to use them. Guard against someone "fixing" that.
+    assert set(EXCLUDED_HIGH_CARD_COLS) <= set(cols), (
+        "the gradient-boosted model is supposed to receive the columns the "
+        "linear baseline excludes; that contrast is the point of the comparison"
+    )
+
+
+_assert_lgbm_set_is_sane()

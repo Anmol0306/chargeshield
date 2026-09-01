@@ -1,0 +1,96 @@
+{
+  "split": {
+    "val": {
+      "pr_auc": 0.6178928221723415,
+      "roc_auc": 0.9282483053145018,
+      "brier": 0.019903679423513013,
+      "prevalence": 0.03434145019812375,
+      "n": 88581,
+      "at_val_selected_threshold": {
+        "threshold": 0.15999999999999998,
+        "precision": 0.6368887177512514,
+        "recall": 0.5437212360289283,
+        "f1": 0.5866288348998049,
+        "confusion_matrix": {
+          "tn": 84596,
+          "fp": 943,
+          "fn": 1388,
+          "tp": 1654
+        },
+        "predicted_positive_rate": 0.02931779952811551
+      },
+      "at_threshold_0.5": {
+        "threshold": 0.5,
+        "precision": 0.8734987990392313,
+        "recall": 0.3586456278763971,
+        "f1": 0.5085061757166162,
+        "confusion_matrix": {
+          "tn": 85381,
+          "fp": 158,
+          "fn": 1951,
+          "tp": 1091
+        },
+        "predicted_positive_rate": 0.014100089183910772
+      }
+    },
+    "test": {
+      "pr_auc": 0.5430998618608887,
+      "roc_auc": 0.9014055614042357,
+      "brier": 0.022052765088902044,
+      "prevalence": 0.03480430340592226,
+      "n": 88581,
+      "at_val_selected_threshold": {
+        "threshold": 0.15999999999999998,
+        "precision": 0.553106936416185,
+        "recall": 0.4965942264028544,
+        "f1": 0.5233293454110408,
+        "confusion_matrix": {
+          "tn": 84261,
+          "fp": 1237,
+          "fn": 1552,
+          "tp": 1531
+        },
+        "predicted_positive_rate": 0.03124823607771418
+      },
+      "at_threshold_0.5": {
+        "threshold": 0.5,
+        "precision": 0.8109375,
+        "recall": 0.3366850470321116,
+        "f1": 0.4758193903277561,
+        "confusion_matrix": {
+          "tn": 85256,
+          "fp": 242,
+          "fn": 2045,
+          "tp": 1038
+        },
+        "predicted_positive_rate": 0.014450051365416963
+      }
+    }
+  },
+  "model": "LGBMClassifier",
+  "params": {
+    "objective": "binary",
+    "n_estimators": 3000,
+    "learning_rate": 0.05,
+    "num_leaves": 64,
+    "min_child_samples": 100,
+    "subsample": 0.8,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.8,
+    "reg_lambda": 1.0,
+    "max_bin": 255,
+    "random_state": 42,
+    "deterministic": true,
+    "force_row_wise": true,
+    "n_jobs": -1,
+    "verbose": -1
+  },
+  "best_iteration": 610,
+  "selected_threshold": 0.15999999999999998,
+  "threshold_selected_on": "val",
+  "notes": [
+    "val is a SELECTION set: early stopping and the operating threshold both read it. Its metrics are optimistic. Quote test.",
+    "No scale_pos_weight: natural prevalence preserved so the probability scale stays usable for ml/calibrate.py.",
+    "NaN is not imputed; LightGBM learns a default direction per split."
+  ]
+}
