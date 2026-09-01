@@ -34,3 +34,26 @@ row — the model quietly ignoring a field it was trained on, with no error. Two
 representations of the same concept encoded two different ways is a class of
 bug that only a test comparing the two representations can catch. Assert on
 the *fitted artifact*, not just on the score.
+
+---
+
+## Failure 02 — Isotonic calibrator was not monotone at float32 precision
+*Sep 1, `ml/calibrate.py`*
+
+**Problem:** `test_isotonic_is_non_decreasing` failed on 69 of 500 probe
+points, with the largest backward step at `-1.19e-07`.
+
+**Cause:** Not a calibration bug — a dtype bug. Predictions are persisted to
+parquet as float32 to keep the files small, and `IsotonicRegression` was fit
+and evaluated at that precision, so adjacent steps of the fitted step function
+differed by one ULP in the wrong direction.
+
+**Fix:** Cast to float64 inside `IsotonicCalibrator.fit`/`.predict`. Storage
+stays float32; the arithmetic does not.
+
+**Lesson:** The magnitude was numerically irrelevant — no decision at any
+threshold changes by 1e-07. Kept the fix anyway, because "a calibrator whose
+output can decrease as the model score increases" is not a sentence worth
+having to explain in a panel, and the cost of the fix was one cast. Storage
+precision and arithmetic precision are separate decisions, and letting the
+first silently set the second is how you get results that are *almost* right.

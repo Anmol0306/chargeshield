@@ -72,6 +72,32 @@ Val metrics are reported but are a **selection** estimate: early stopping and
 the threshold sweep both read val. Test is the number quoted.
 
 ### Calibration
+The cost model computes expected loss as `p x loss`. That arithmetic is only
+honest if `p` is a real probability — if the transactions scored 0.30 are
+fraudulent about 30% of the time. A model can rank well and still be badly
+calibrated, so this is verified rather than assumed.
+
+Candidates: uncalibrated, Platt, isotonic. Fit on `val_fit` (first 70% of val,
+chronological), winner chosen by Brier on `val_pick` (last 30%, unseen by
+both). Fitting and choosing on the same slice would always select isotonic.
+
+| On test | Brier | log loss | ECE | ROC-AUC |
+|---|---|---|---|---|
+| Uncalibrated | 0.02205 | 0.09259 | 0.0077 | 0.9014 |
+| Platt (selected) | 0.02214 | 0.09233 | **0.0050** | 0.9014 |
+
+**The honest reading: LightGBM's raw output was already close to calibrated.**
+Platt halves the calibration gap (0.77 → 0.50 percentage points) and improves
+log loss, but Brier is a wash. Calibration here was worth verifying more than
+it was worth applying — which is the finding, not a disappointment. Mean
+predicted probability on test is 0.0365 against an observed fraud rate of
+0.0348, a ~5% relative over-prediction.
+
+ROC-AUC is identical before and after because Platt is strictly monotonic and
+cannot reorder. That is asserted in code, not assumed.
+
+Reliability curve: `evaluation/charts/calibration.png`.
+
 ### Threshold selection
 
 ## Cost model
