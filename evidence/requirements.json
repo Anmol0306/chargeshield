@@ -1,15 +1,51 @@
 {
-  "_comment": "Map reason_code -> evidence. Populate from Razorpay's dispute evidence docs, not from memory. Cite the doc URL in README.",
+  "_source": {
+    "evidence_field_names": "https://razorpay.com/docs/api/disputes/entity/",
+    "evidence_submission": "https://razorpay.com/docs/payments/disputes/submit-evidence/",
+    "retrieved": "2026-09-02",
+    "what_is_documented": [
+      "Every key inside `required` and `optional` below is a real field of",
+      "Razorpay's dispute `evidence` object, taken from the entity reference.",
+      "The full documented set is: amount, summary, shipping_proof,",
+      "billing_proof, cancellation_proof, customer_communication,",
+      "proof_of_service, explanation_letter, refund_confirmation,",
+      "access_activity_log, refund_cancellation_policy, term_and_conditions,",
+      "others, submitted_at."
+    ],
+    "what_is_CONSTRUCTED_BY_THIS_PROJECT": [
+      "The reason-code vocabulary below (FRAUD, NON_RECEIPT, ...) and the",
+      "mapping from reason code to required evidence. Razorpay's `reason_code`",
+      "is a network-supplied string with a `reason_description`; the docs do",
+      "not publish an exhaustive code list or a code->evidence matrix.",
+      "This mapping is therefore a reasonable construction for demonstrating",
+      "deterministic gate behaviour. It is NOT a claim about what Razorpay or",
+      "any card network requires. Do not present it as one."
+    ]
+  },
+
   "FRAUD": {
-    "required": ["authentication_record", "customer_communication"],
-    "optional": ["device_fingerprint", "ip_address", "transaction_history"]
+    "phase": "fraud",
+    "required": ["customer_communication", "billing_proof"],
+    "optional": ["access_activity_log", "shipping_proof", "explanation_letter"]
   },
   "NON_RECEIPT": {
-    "required": ["shipping_proof", "delivery_confirmation"],
-    "optional": ["invoice", "order_record", "tracking_number"]
+    "phase": "chargeback",
+    "required": ["shipping_proof", "billing_proof"],
+    "optional": ["customer_communication", "explanation_letter", "term_and_conditions"]
   },
   "SERVICE_NOT_RENDERED": {
-    "required": ["service_access_log", "invoice"],
-    "optional": ["customer_communication", "terms_acceptance"]
+    "phase": "chargeback",
+    "required": ["proof_of_service", "access_activity_log"],
+    "optional": ["term_and_conditions", "customer_communication", "explanation_letter"]
+  },
+  "SUBSCRIPTION_CANCELLED": {
+    "phase": "chargeback",
+    "required": ["cancellation_proof", "refund_cancellation_policy"],
+    "optional": ["customer_communication", "term_and_conditions"]
+  },
+  "CREDIT_NOT_PROCESSED": {
+    "phase": "chargeback",
+    "required": ["refund_confirmation", "refund_cancellation_policy"],
+    "optional": ["customer_communication", "explanation_letter"]
   }
 }
