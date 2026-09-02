@@ -185,7 +185,45 @@ Charts: `evaluation/charts/cost_curve.png`, `evaluation/charts/cost_prevalence.p
 LLM output is an untrusted proposal. See "Policy engine".
 
 ## Policy engine
-`app/policy/action_policy.py` — pure functions, no I/O, no LLM calls.
+`app/policy/action_policy.py` — pure functions, no I/O, no LLM calls, no clock,
+no randomness. `decide()` cannot reach the network because it has no client and
+cannot read a threshold from disk because thresholds arrive as an argument.
+`tests/test_policy.py::test_policy_is_pure` enforces this by monkeypatching
+`socket` and `open` out from under it, rather than by asserting a comment.
+
+Override order, and why:
+
+| # | Rule | Action | Why this position |
+|---|---|---|---|
+| 1 | `amount_cap_exceeded` | HUMAN_REVIEW | Exposure limit first — it holds even if the score is wrong |
+| 2 | `proposal_cited_evidence_not_on_file` | HUMAN_REVIEW, proposal rejected | Before sufficiency: otherwise a fabricated citation slips through whenever real evidence happens to be complete |
+| 3 | `dispute_too_small_to_repay_representment` | ACCEPT | `w·A ≤ c` — no score or evidence can change the answer, so escalating wastes ₹150 |
+| 4 | `required_evidence_missing` | HUMAN_REVIEW | Cannot substantiate a contest |
+| 5 | `inside_cost_review_band` | HUMAN_REVIEW | Automating is worth less than asking |
+| 6 | `fraud_probability_above_band` | ACCEPT | Contesting likely-genuine fraud burns cost to lose |
+| 7 | `proposal_honoured` | CONTEST | Cost-minimising, evidence on file |
+
+Bands are amount-dependent and derived from the cost model, not chosen — see
+`docs/ARCHITECTURE.md`. Every decision records which rule fired; an
+unexplainable decision is not auditable, and an unauditable gate is decoration.
+
+### Batch results over the anchored dispute queue
+5,013 disputes, queue fraud rate 48.65% (`evaluation/batch_results.json`).
+
+**The one dispute-side metric with real ground truth:**
+
+| Wasted representment effort | |
+|---|---|
+| Contested | 1,803 |
+| …of which genuinely fraudulent (real `isFraud`) | 672 → **37.3%** |
+| Contest-everything would waste | 48.7% |
+| **Relative reduction** | **23.4%** |
+
+**Do not quote the HUMAN_REVIEW share as a finding.** It is 56.1%, dominated by
+`required_evidence_missing`, and evidence availability in the synthetic queue is
+a parameter (`p_required_evidence_present = 0.70`), not an observation. The
+informative view is the slice where evidence is complete and the model actually
+drives the decision (n=2,477): CONTEST 72.8%, ACCEPT 13.6%, HUMAN_REVIEW 13.6%.
 
 ## Failure handling
 See [FAILURES.md](FAILURES.md).

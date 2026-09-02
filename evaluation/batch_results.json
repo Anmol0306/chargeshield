@@ -1,0 +1,53 @@
+{
+  "created_utc": "2026-09-02T18:17:11+00:00",
+  "n_disputes": 5013,
+  "queue_fraud_rate": 0.4865350089766607,
+  "actions": {
+    "CONTEST": 1803,
+    "HUMAN_REVIEW": 2814,
+    "ACCEPT": 396
+  },
+  "action_share": {
+    "CONTEST": 0.35966487133453023,
+    "HUMAN_REVIEW": 0.5613405146618791,
+    "ACCEPT": 0.07899461400359066
+  },
+  "rules_fired": {
+    "proposal_honoured": 1803,
+    "required_evidence_missing": 2180,
+    "inside_cost_review_band": 69,
+    "dispute_too_small_to_repay_representment": 100,
+    "amount_cap_exceeded": 565,
+    "fraud_probability_above_band": 296
+  },
+  "wasted_representment": {
+    "contested": 1803,
+    "contested_that_were_real_fraud": 672,
+    "wasted_rate": 0.37271214642262895,
+    "contest_all_wasted_rate": 0.4865350089766607,
+    "relative_reduction_vs_contest_all": 0.23394588355201357,
+    "label_source": "real isFraud on the anchor transaction"
+  },
+  "forfeited_winnable": {
+    "accepted": 396,
+    "accepted_that_were_legitimate": 27
+  },
+  "evidence_complete_subset": {
+    "n": 2477,
+    "actions": {
+      "CONTEST": 1803,
+      "HUMAN_REVIEW": 337,
+      "ACCEPT": 337
+    },
+    "action_share": {
+      "CONTEST": 0.727896649172386,
+      "HUMAN_REVIEW": 0.13605167541380703,
+      "ACCEPT": 0.13605167541380703
+    }
+  },
+  "notes": [
+    "wasted_representment is measured against REAL isFraud labels on the anchor transactions. It is the only dispute-side metric here with real ground truth.",
+    "No win rate, money recovered, or dispute outcome is measured or claimable.",
+    "The HUMAN_REVIEW share is dominated by required_evidence_missing, and evidence availability in the synthetic queue is a parameter (p_required_evidence_present), not an observation. Do NOT quote the review rate as a finding. Use evidence_complete_subset."
+  ]
+}

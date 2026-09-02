@@ -12,7 +12,7 @@ import re
 TESTS = pathlib.Path(__file__).parent
 
 # Files known to be scaffolding. Remove entries as they are implemented.
-KNOWN_EMPTY = {"test_schema.py", "test_policy.py", "test_failure_modes.py"}
+KNOWN_EMPTY = {"test_schema.py", "test_failure_modes.py"}
 
 
 def _test_functions(path: pathlib.Path) -> list[str]:

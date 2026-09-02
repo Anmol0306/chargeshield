@@ -501,6 +501,15 @@ def main() -> None:
             f"expected cost is within one human review (INR {review_cost}) of the "
             f"optimum. Disputes above INR {cap:,} bypass this entirely."
         ),
+        "superseded_by": (
+            "review_band_low/high here is a POPULATION-level summary and is too "
+            "wide to use as a policy (0.405). app/policy/thresholds.py derives "
+            "the band PER DISPUTE from the same cost model -- "
+            "1 - (c+h)/(w*A) < p < 1 - (c-h)/(w*A) -- which is the correct level "
+            "for a per-dispute decision and comes out ~0.07 wide at the median "
+            "amount. The engine uses that; these values are retained for "
+            "reference only."
+        ),
         "caveat": (
             "assumed_dispute_fraud_rate is STATED, not measured. IEEE-CIS has no "
             "dispute queue. See evaluation/cost_curve.json prevalence_sensitivity "
