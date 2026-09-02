@@ -84,6 +84,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from app.policy.thresholds import indifference_threshold as _canonical_indifference
+
 CONFIG = Path("config/costs.yaml")
 PROCESSED_DIR = Path("data/processed")
 ARTIFACTS_DIR = Path("artifacts")
@@ -135,7 +137,7 @@ def prevalence_weights(y: np.ndarray, pi0: float, pi: float) -> np.ndarray:
     return np.where(y, pi / pi0, (1 - pi) / (1 - pi0))
 
 
-def expected_cost(df: pd.DataFrame, t: float, c: float, w: float,
+def expected_cost(df: pd.DataFrame, t: float | None, c: float, w: float,
                   p: np.ndarray | None = None,
                   weights: np.ndarray | None = None,
                   contest: np.ndarray | None = None) -> dict:
@@ -154,6 +156,8 @@ def expected_cost(df: pd.DataFrame, t: float, c: float, w: float,
     # rule that ignores the model) through exactly this loss function, rather
     # than reimplementing it and hoping the two stay in sync.
     if contest is None:
+        if t is None:
+            raise ValueError("expected_cost needs either a threshold or a contest mask")
         contest = p < t
     accept = ~contest
 
@@ -170,7 +174,10 @@ def expected_cost(df: pd.DataFrame, t: float, c: float, w: float,
 
     n_eff = q.sum()
     return {
-        "threshold": float(t),
+        # None when an explicit policy mask was supplied: there is no single
+        # threshold describing an arbitrary policy, and float("nan") here made
+        # evaluation/metrics.json fail strict JSON parsing.
+        "threshold": None if t is None else float(t),
         "total_inr": float(cost),
         "per_dispute_inr": float(cost / n_eff),
         "n_contested": int(contest.sum()),
@@ -197,10 +204,12 @@ def shifted(df: pd.DataFrame, pi: float | None):
 
 
 def analytic_threshold(amount_inr: float, c: float, w: float) -> float:
-    """p*(A) = 1 - c / (w * A), clipped to [0, 1]."""
-    if amount_inr <= 0:
-        return 0.0
-    return float(np.clip(1.0 - c / (w * amount_inr), 0.0, 1.0))
+    """p*(A) = 1 - c / (w * A). Delegates to app/policy/thresholds.py.
+
+    The policy engine is the authority on the decision boundary; this module is
+    the analysis of it. Two copies of the formula is how they drift apart.
+    """
+    return _canonical_indifference(amount_inr, c, w)
 
 
 def review_band(curve: list[dict], best_t: float,

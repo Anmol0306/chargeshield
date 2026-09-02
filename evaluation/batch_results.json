@@ -1,6 +1,64 @@
 {
-  "created_utc": "2026-09-02T18:17:11+00:00",
+  "created_utc": "2026-09-02T18:27:42+00:00",
   "n_disputes": 5013,
+  "policy_comparison": {
+    "defend_none": {
+      "total_inr": 62484497.86,
+      "per_dispute_inr": 12464.491893077997,
+      "saving_vs_defend_all_inr_per_dispute": -3631.3434386594854,
+      "saving_vs_static_rule_inr_per_dispute": -3639.836291841213
+    },
+    "defend_all": {
+      "total_inr": 44280573.202,
+      "per_dispute_inr": 8833.148454418511,
+      "saving_vs_defend_all_inr_per_dispute": 0.0,
+      "saving_vs_static_rule_inr_per_dispute": -8.492853181727696
+    },
+    "static_amount_rule": {
+      "total_inr": 44237998.529,
+      "per_dispute_inr": 8824.655601236784,
+      "saving_vs_defend_all_inr_per_dispute": 8.492853181727696,
+      "saving_vs_static_rule_inr_per_dispute": 0.0
+    },
+    "chargeshield": {
+      "total_inr": 44327729.941,
+      "per_dispute_inr": 8842.555344304807,
+      "saving_vs_defend_all_inr_per_dispute": -9.406889886295176,
+      "saving_vs_static_rule_inr_per_dispute": -17.89974306802287
+    }
+  },
+  "policy_comparison_by_segment": {
+    "all_disputes": {
+      "n": 5013,
+      "chargeshield_inr_per_dispute": 8842.555344304807,
+      "static_rule_inr_per_dispute": 8824.655601236784,
+      "chargeshield_advantage_inr_per_dispute": -17.89974306802287
+    },
+    "evidence_complete": {
+      "n": 2477,
+      "chargeshield_inr_per_dispute": 8563.187249495359,
+      "static_rule_inr_per_dispute": 8612.386593056117,
+      "chargeshield_advantage_inr_per_dispute": 49.19934356075828
+    },
+    "evidence_incomplete": {
+      "n": 2536,
+      "chargeshield_inr_per_dispute": 9115.423944794953,
+      "static_rule_inr_per_dispute": 9031.986174290221,
+      "chargeshield_advantage_inr_per_dispute": -83.43777050473182
+    },
+    "actionable_complete_and_under_cap": {
+      "n": 2209,
+      "chargeshield_inr_per_dispute": 4766.580993209597,
+      "static_rule_inr_per_dispute": 4835.420637392485,
+      "chargeshield_advantage_inr_per_dispute": 68.83964418288815
+    },
+    "human_review_overhead": {
+      "n_reviews": 2814,
+      "cost_per_review_inr": 150.0,
+      "total_inr": 422100.0,
+      "inr_per_dispute_across_queue": 84.20107719928187
+    }
+  },
   "queue_fraud_rate": 0.4865350089766607,
   "actions": {
     "CONTEST": 1803,
@@ -48,6 +106,9 @@
   "notes": [
     "wasted_representment is measured against REAL isFraud labels on the anchor transactions. It is the only dispute-side metric here with real ground truth.",
     "No win rate, money recovered, or dispute outcome is measured or claimable.",
+    "ACROSS THE WHOLE QUEUE ChargeShield is slightly WORSE than the static amount rule. The aggregate hides two opposite effects: on actionable disputes (evidence on file, under the amount cap) it wins, and on disputes with missing evidence it loses because it pays for a human rather than filing an unsubstantiated representment. The second is a safety property bought on purpose. The share of disputes with incomplete evidence is a PARAMETER (p_required_evidence_present), not an observation, so the net figure moves with a dial rather than with the model.",
+    "policy_comparison prices the REAL policy engine on the dispute queue against real isFraud labels. ml/evaluate.py's comparison is a transaction-level global-threshold rule and is NOT this.",
+    "Human review is modelled as an analyst choosing the cost-minimising action given the same p the model saw -- not an oracle. That is conservative for ChargeShield, which is the policy that routes to humans.",
     "The HUMAN_REVIEW share is dominated by required_evidence_missing, and evidence availability in the synthetic queue is a parameter (p_required_evidence_present), not an observation. Do NOT quote the review rate as a finding. Use evidence_complete_subset."
   ]
 }

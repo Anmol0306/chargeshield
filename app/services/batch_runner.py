@@ -44,6 +44,123 @@ REQUIREMENTS_PATH = Path("evidence/requirements.json")
 OUT_PATH = Path("evaluation/batch_results.json")
 
 
+def realised_cost(action: str, is_fraud: bool, amount_inr: float, p_fraud: float,
+                  config: PolicyConfig) -> float:
+    """What this action ACTUALLY cost, given what the transaction turned out to be.
+
+    Uses the real isFraud label, not the model's belief -- these disputes are
+    anchored to real held-out transactions, so realised cost is measurable
+    rather than projected. `w` remains an assumption (whether a contest on a
+    legitimate transaction succeeds is not in the data).
+
+        ACCEPT              -> A                    the chargeback stands
+        CONTEST, fraud      -> c + A                pay the cost, lose anyway
+        CONTEST, legitimate -> c + (1 - w) * A      pay the cost, usually recover
+        HUMAN_REVIEW        -> h + realised cost of the analyst's action
+
+    The analyst is modelled as choosing the cost-minimising action given the
+    SAME information the model had (p), not given the true label. Modelling an
+    oracle analyst would be generous to human review -- and since ChargeShield
+    is the policy that routes work to humans, that generosity would flatter
+    every comparator except ours. This assumption is therefore conservative for
+    the claim being made.
+    """
+    c = config.representment_cost_inr
+    w = config.assumed_win_rate_if_legitimate
+    h = config.human_review_cost_inr
+
+    def contest_cost() -> float:
+        return c + amount_inr * (1.0 if is_fraud else (1.0 - w))
+
+    if action == "CONTEST":
+        return contest_cost()
+    if action == "ACCEPT":
+        return amount_inr
+
+    # HUMAN_REVIEW: analyst picks by expected cost given p, then reality lands.
+    expected_contest = c + amount_inr * (1.0 - w * (1.0 - p_fraud))
+    return h + (contest_cost() if expected_contest < amount_inr else amount_inr)
+
+
+def price_policies(decisions: list[tuple[dict, object]], config: PolicyConfig) -> dict:
+    """Four policies on the SAME dispute queue, priced by the same function.
+
+    Unlike ml/evaluate.py's transaction-level comparison, the ChargeShield row
+    here IS the shipped policy engine -- amount-dependent bands, evidence gate,
+    fabrication check, amount cap and economic floor, exactly as it runs.
+    """
+    w = config.assumed_win_rate_if_legitimate
+    c = config.representment_cost_inr
+    rows: dict[str, list[float]] = {k: [] for k in
+                                    ("defend_none", "defend_all",
+                                     "static_amount_rule", "chargeshield")}
+    for d, dec in decisions:
+        cs = d["_chargeshield"]
+        y, a, p = bool(cs["anchor_is_fraud"]), cs["amount_inr"], cs["p_fraud_calibrated"]
+        rows["defend_none"].append(realised_cost("ACCEPT", y, a, p, config))
+        rows["defend_all"].append(realised_cost("CONTEST", y, a, p, config))
+        rows["static_amount_rule"].append(
+            realised_cost("CONTEST" if w * a > c else "ACCEPT", y, a, p, config))
+        rows["chargeshield"].append(realised_cost(dec.action, y, a, p, config))
+
+    n = len(decisions)
+    out = {k: {"total_inr": sum(v), "per_dispute_inr": sum(v) / n} for k, v in rows.items()}
+    static = out["static_amount_rule"]["per_dispute_inr"]
+    all_ = out["defend_all"]["per_dispute_inr"]
+    for k, r in out.items():
+        r["saving_vs_defend_all_inr_per_dispute"] = all_ - r["per_dispute_inr"]
+        r["saving_vs_static_rule_inr_per_dispute"] = static - r["per_dispute_inr"]
+    return out
+
+
+def policy_comparison_by_segment(decisions: list[tuple[dict, object]],
+                                 config: PolicyConfig) -> dict:
+    """Where does the gate earn its keep, and where does it pay for safety?
+
+    The headline comparison across the whole queue is close to a wash, and the
+    aggregate hides two opposite effects that matter more than the net:
+
+      evidence complete   the model has what it needs, and the gate WINS
+      evidence missing    the gate pays for a human rather than filing an
+                          unsubstantiated representment, and LOSES
+
+    The second is the price of a safety property, deliberately bought. Reporting
+    only the net would make a chosen trade-off look like a modelling failure.
+    """
+    def seg(name, subset):
+        if not subset:
+            return None
+        priced = price_policies(subset, config)
+        return {
+            "n": len(subset),
+            "chargeshield_inr_per_dispute": priced["chargeshield"]["per_dispute_inr"],
+            "static_rule_inr_per_dispute": priced["static_amount_rule"]["per_dispute_inr"],
+            "chargeshield_advantage_inr_per_dispute":
+                priced["static_amount_rule"]["per_dispute_inr"]
+                - priced["chargeshield"]["per_dispute_inr"],
+        }
+
+    cap = config.auto_action_amount_cap_inr
+    complete = [x for x in decisions if x[0]["_chargeshield"]["evidence_complete"]]
+    incomplete = [x for x in decisions if not x[0]["_chargeshield"]["evidence_complete"]]
+    actionable = [x for x in complete if x[0]["_chargeshield"]["amount_inr"] <= cap]
+
+    reviews = sum(1 for _, d in decisions if d.action == "HUMAN_REVIEW")
+    return {
+        "all_disputes": seg("all", decisions),
+        "evidence_complete": seg("complete", complete),
+        "evidence_incomplete": seg("incomplete", incomplete),
+        "actionable_complete_and_under_cap": seg("actionable", actionable),
+        "human_review_overhead": {
+            "n_reviews": reviews,
+            "cost_per_review_inr": config.human_review_cost_inr,
+            "total_inr": reviews * config.human_review_cost_inr,
+            "inr_per_dispute_across_queue":
+                reviews * config.human_review_cost_inr / len(decisions),
+        },
+    }
+
+
 def load_requirements(path: Path = REQUIREMENTS_PATH) -> dict:
     return {k: v for k, v in json.loads(path.read_text()).items()
             if not k.startswith("_")}
@@ -96,6 +213,8 @@ def run_batch(disputes: list[dict], config: PolicyConfig, requirements: dict,
     return {
         "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "n_disputes": n,
+        "policy_comparison": price_policies(decisions, config),
+        "policy_comparison_by_segment": policy_comparison_by_segment(decisions, config),
         "queue_fraud_rate": queue_rate,
         "actions": dict(actions),
         "action_share": {k: v / n for k, v in actions.items()},
@@ -125,6 +244,22 @@ def run_batch(disputes: list[dict], config: PolicyConfig, requirements: dict,
             "with real ground truth.",
             "No win rate, money recovered, or dispute outcome is measured or "
             "claimable.",
+            "ACROSS THE WHOLE QUEUE ChargeShield is slightly WORSE than the "
+            "static amount rule. The aggregate hides two opposite effects: on "
+            "actionable disputes (evidence on file, under the amount cap) it "
+            "wins, and on disputes with missing evidence it loses because it "
+            "pays for a human rather than filing an unsubstantiated "
+            "representment. The second is a safety property bought on purpose. "
+            "The share of disputes with incomplete evidence is a PARAMETER "
+            "(p_required_evidence_present), not an observation, so the net "
+            "figure moves with a dial rather than with the model.",
+            "policy_comparison prices the REAL policy engine on the dispute "
+            "queue against real isFraud labels. ml/evaluate.py's comparison is "
+            "a transaction-level global-threshold rule and is NOT this.",
+            "Human review is modelled as an analyst choosing the cost-minimising "
+            "action given the same p the model saw -- not an oracle. That is "
+            "conservative for ChargeShield, which is the policy that routes to "
+            "humans.",
             "The HUMAN_REVIEW share is dominated by required_evidence_missing, "
             "and evidence availability in the synthetic queue is a parameter "
             "(p_required_evidence_present), not an observation. Do NOT quote "
@@ -157,6 +292,27 @@ def main() -> None:
           f"were genuine fraud = {w['wasted_rate']:.1%}")
     print(f"  contest-everything would waste {w['contest_all_wasted_rate']:.1%}")
     print(f"  relative reduction: {w['relative_reduction_vs_contest_all']:.1%}")
+
+    print(f"\npolicy comparison on the dispute queue (realised cost, real labels):")
+    print(f"  {'policy':>20} {'INR/dispute':>12} {'vs defend-all':>14} {'vs static':>11}")
+    print("  " + "-" * 60)
+    for k, r in sorted(results["policy_comparison"].items(),
+                       key=lambda kv: -kv[1]["per_dispute_inr"]):
+        print(f"  {k:>20} {r['per_dispute_inr']:12,.0f} "
+              f"{r['saving_vs_defend_all_inr_per_dispute']:14,.0f} "
+              f"{r['saving_vs_static_rule_inr_per_dispute']:11,.0f}")
+
+    seg = results["policy_comparison_by_segment"]
+    print(f"\n  segment decomposition (ChargeShield minus static rule, INR/dispute):")
+    for k in ("all_disputes", "evidence_complete", "evidence_incomplete",
+              "actionable_complete_and_under_cap"):
+        r = seg[k]
+        if r:
+            print(f"    {k:>36} n={r['n']:>5,}  "
+                  f"{r['chargeshield_advantage_inr_per_dispute']:+8,.0f}")
+    o = seg["human_review_overhead"]
+    print(f"    {'human review overhead':>36} {o['n_reviews']:>7,} reviews  "
+          f"{o['inr_per_dispute_across_queue']:+8,.0f} /dispute")
 
     e = results["evidence_complete_subset"]
     print(f"\naction mix where evidence is complete (n={e['n']:,}) — "

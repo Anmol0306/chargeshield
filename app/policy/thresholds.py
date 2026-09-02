@@ -50,6 +50,32 @@ BANDS_PATH = Path("artifacts/policy_bands.json")
 COSTS_PATH = Path("config/costs.yaml")
 
 
+def indifference_threshold(amount_inr: float, representment_cost_inr: float,
+                           win_rate: float) -> float:
+    """p*(A) = 1 - c / (w * A), clipped to [0, 1]. THE canonical implementation.
+
+    Module-level and dependency-free on purpose: ml/cost_curve.py imports this
+    rather than carrying its own copy. Two implementations of the decision
+    boundary is how the cost analysis and the policy engine end up silently
+    disagreeing about what the model recommends.
+    """
+    denom = win_rate * amount_inr
+    if denom <= 0:
+        return 0.0
+    return min(1.0, max(0.0, 1.0 - representment_cost_inr / denom))
+
+
+def review_band(amount_inr: float, representment_cost_inr: float, win_rate: float,
+                human_review_cost_inr: float) -> tuple[float, float]:
+    """The p-range around p*(A) where automating is worth less than asking."""
+    denom = win_rate * amount_inr
+    if denom <= 0:
+        return 0.0, 0.0
+    low = 1.0 - (representment_cost_inr + human_review_cost_inr) / denom
+    high = 1.0 - (representment_cost_inr - human_review_cost_inr) / denom
+    return min(1.0, max(0.0, low)), min(1.0, max(0.0, high))
+
+
 @dataclass(frozen=True)
 class PolicyConfig:
     """Immutable. Everything decide() needs, and nothing it could mutate."""
@@ -70,10 +96,9 @@ class PolicyConfig:
         is. A dispute smaller than c / w can never repay a representment, so
         p* clips to 0 and the dispute is always accepted.
         """
-        denom = self.assumed_win_rate_if_legitimate * amount_inr
-        if denom <= 0:
-            return 0.0
-        return min(1.0, max(0.0, 1.0 - self.representment_cost_inr / denom))
+        return indifference_threshold(
+            amount_inr, self.representment_cost_inr,
+            self.assumed_win_rate_if_legitimate)
 
     def review_band(self, amount_inr: float) -> tuple[float, float]:
         """The p-range around p*(A) where automating is worth less than asking.
@@ -83,14 +108,9 @@ class PolicyConfig:
         confident enough to act here" -- confidence measured in rupees, not in
         distance from 0.5.
         """
-        c = self.representment_cost_inr
-        h = self.human_review_cost_inr
-        denom = self.assumed_win_rate_if_legitimate * amount_inr
-        if denom <= 0:
-            return 0.0, 0.0
-        low = 1.0 - (c + h) / denom
-        high = 1.0 - (c - h) / denom
-        return min(1.0, max(0.0, low)), min(1.0, max(0.0, high))
+        return review_band(
+            amount_inr, self.representment_cost_inr,
+            self.assumed_win_rate_if_legitimate, self.human_review_cost_inr)
 
 
 def load_policy_config(bands_path: Path = BANDS_PATH,

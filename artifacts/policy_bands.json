@@ -1,6 +1,6 @@
 {
   "source": "ml/cost_curve.py",
-  "created_utc": "2026-09-01T14:23:54+00:00",
+  "created_utc": "2026-09-02T18:27:17+00:00",
   "scenario": "balanced",
   "assumed_dispute_fraud_rate": 0.5,
   "threshold": 0.91,
@@ -9,5 +9,6 @@
   "auto_action_amount_cap_inr": 25000,
   "expected_contest_rate": 0.7447925243729488,
   "derivation": "Threshold minimises expected INR cost per dispute on val under the 'balanced' scenario, with scores prior-shifted and the population re-weighted to an assumed dispute-queue fraud rate of 50%, then applied unchanged to test. Review band is the region where expected cost is within one human review (INR 150) of the optimum. Disputes above INR 25,000 bypass this entirely.",
+  "superseded_by": "review_band_low/high here is a POPULATION-level summary and is too wide to use as a policy (0.405). app/policy/thresholds.py derives the band PER DISPUTE from the same cost model -- 1 - (c+h)/(w*A) < p < 1 - (c-h)/(w*A) -- which is the correct level for a per-dispute decision and comes out ~0.07 wide at the median amount. The engine uses that; these values are retained for reference only.",
   "caveat": "assumed_dispute_fraud_rate is STATED, not measured. IEEE-CIS has no dispute queue. See evaluation/cost_curve.json prevalence_sensitivity for how the threshold and the model's edge move across 3.5%-65%."
 }

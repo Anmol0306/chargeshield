@@ -91,3 +91,60 @@ shifted ones are reported: deleting the embarrassing one and keeping the
 flattering one would have been the easy move and the dishonest one. A
 base-rate-dependent conclusion needs its base rate stated as an assumption and
 swept, not inherited by accident from whatever data was lying around.
+
+---
+
+## Failure 04 — The policy comparison measured a policy we do not ship
+*Sep 2, `ml/evaluate.py`, found in a pre-Day-4 audit*
+
+**Problem:** The README reported "ChargeShield beats the best no-model policy by
+₹84 per dispute" and called that "the value attributable to the ML". Re-running
+the comparison with the actual policy engine gave **−₹18** — the shipped gate is
+slightly *worse* than the static amount rule across the queue.
+
+**Cause:** `ml/evaluate.py:152` defined the row labelled `chargeshield` as
+`p_shift < bands["threshold"]` — a single global threshold on the score. The
+real gate uses amount-dependent bands, an evidence gate, a fabrication check,
+an amount cap and an economic floor. Worse, it *cannot* run in that module at
+all: `evaluate.py` operates on transactions, and transactions carry no
+`reason_code` and no evidence. So the row was not a degraded version of the
+policy engine, it was a different object with the product's name on it.
+
+**Fix:** Renamed the row to `global_cost_threshold_rule` with an explicit note
+that it is not the shipped engine. Added `price_policies()` to
+`app/services/batch_runner.py`, which prices the four policies on the dispute
+queue using the actual `decide()` against real `isFraud` labels, plus a segment
+decomposition showing where the gate wins (+₹69 on actionable disputes) and
+where it pays for safety (−₹83 where evidence is missing).
+`tests/test_artifacts.py` now fails if a `chargeshield` key reappears in
+`evaluate.py`'s output, and asserts the batch row is produced by the real
+`decide()` rather than by a label.
+
+**Lesson:** The most dangerous number is the flattering one that nobody
+re-derives. This survived three days and a commit message that quoted it,
+because every test checked that the arithmetic was *internally* consistent and
+none checked that the thing being priced was the thing being shipped. Naming is
+part of correctness: a variable called `chargeshield` that is not ChargeShield
+will be believed by everyone including its author. The corrected result is also
+a better story — "the gate costs ₹18/dispute and here is exactly what that buys"
+is defensible; "+₹84" was not true.
+
+---
+
+## Failure 05 — `evaluation/metrics.json` was not valid JSON
+*Sep 2, same audit*
+
+**Problem:** `evaluation/metrics.json` contained bare `NaN`, which no strict
+JSON parser accepts. The Day-5 frontend would have failed to load it.
+
+**Cause:** `expected_cost()` was called with `t=np.nan` when a policy mask was
+supplied instead of a threshold, and `json.dumps` serialises NaN happily.
+Python's own `json.loads` also *reads* it back happily, so every test passed.
+
+**Fix:** `threshold` is now `None` when a mask is given, and
+`tests/test_artifacts.py` parses every committed JSON artifact with
+`parse_constant` set to raise — the check Python does not do by default.
+
+**Lesson:** Round-tripping through the same library proves nothing about
+interoperability. The test that mattered was the one that made Python behave
+like a stricter consumer.

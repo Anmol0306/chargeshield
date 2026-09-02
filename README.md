@@ -242,21 +242,56 @@ Each model at its own val-selected threshold. The baseline's scores are
 rescaled by `class_weight="balanced"` and are not on the same axis as the
 calibrated LightGBM's, so only PR-AUC and ROC-AUC are directly comparable.
 
-### Policy comparison (₹ per dispute, balanced scenario, assumed 50% queue fraud)
-| Policy | Contested | ₹/dispute | vs defend-all | vs static rule |
-|---|---|---|---|---|
-| Defend none | 0.0% | 6,955 | −2,071 | −2,080 |
-| Defend all | 100.0% | 4,883 | 0 | −9 |
-| Static amount rule | 97.9% | 4,874 | +9 | 0 |
-| **ChargeShield** | 74.5% | **4,790** | **+93** | **+84** |
+### Policy comparison
+Two comparisons exist and they say different things. Read both.
 
-The static amount rule is the honest adversary: it is the cost-optimal policy
-available to a merchant with **no model at all** (contest iff expected recovery
-beats the representment cost). It is a far harder baseline than defend-none or
-defend-all — note it already captures almost everything defend-all does. The
-₹84/dispute gap between it and ChargeShield is the value attributable to the ML,
-and it is deliberately reported against that harder comparator rather than
-against the flattering one.
+**On the dispute queue, with the REAL policy engine** (`evaluation/batch_results.json`) —
+5,013 anchored disputes, realised cost against real `isFraud` labels:
+
+| Policy | ₹/dispute | vs defend-all | vs static rule |
+|---|---|---|---|
+| Defend none | 12,464 | −3,631 | −3,640 |
+| **ChargeShield** | 8,843 | −9 | **−18** |
+| Defend all | 8,833 | 0 | −8 |
+| Static amount rule | **8,825** | +8 | 0 |
+
+**Across the whole queue the policy engine is ₹18/dispute worse than the best
+no-model policy.** That is the honest number and it is reported first.
+
+The aggregate hides two opposite effects, and the decomposition is the point:
+
+| Segment | n | ChargeShield vs static rule |
+|---|---|---|
+| Evidence complete **and** under the amount cap | 2,209 | **+₹69/dispute** |
+| Evidence complete | 2,477 | +₹49 |
+| Evidence incomplete | 2,536 | −₹83 |
+| All disputes | 5,013 | −₹18 |
+
+Where the gate has what it needs, it wins. Where evidence is missing it loses,
+because it pays ₹150 for a human rather than filing a representment it cannot
+substantiate. **That is a safety property bought deliberately, not a modelling
+failure** — and human review costs ₹84/dispute across the queue, larger than
+the entire spread between all four policies.
+
+Two caveats that matter more than the numbers:
+- The share of disputes with incomplete evidence is a **parameter**
+  (`p_required_evidence_present = 0.70` in `ml/link_disputes.py`), not an
+  observation. The −₹18 net moves with a dial, not with the model.
+- Human review is modelled as an analyst choosing the cost-minimising action
+  given the same `p` the model saw — not an oracle. That is *conservative* for
+  ChargeShield, since ChargeShield is the policy that routes work to humans.
+
+**On transactions, with a global-threshold rule** (`evaluation/metrics.json`) —
+this is *not* the shipped engine. Transactions carry no `reason_code` and no
+evidence, so the gate cannot run on them. A single cost-optimal threshold on
+the score beats the static amount rule by ₹84/dispute there. That number
+describes a threshold rule, not this product, and an earlier version of this
+README wrongly attributed it to ChargeShield. See FAILURES.md 04.
+
+The static amount rule is the honest adversary throughout: it is the
+cost-optimal policy available with **no model at all** (contest iff expected
+recovery beats the representment cost), and it already captures nearly
+everything defend-all does.
 
 ### Top failure mode
 **Recall on `ProductCD == "W"` is 0.213, against 0.703 on every other product

@@ -149,12 +149,18 @@ def policy_comparison(df: pd.DataFrame, cfg: dict, bands: dict) -> dict:
         # The honest adversary: cost-optimal given ONLY the amount. Contest iff
         # the expected recovery beats what the representment costs. No model.
         "static_amount_rule": (w * a) > c,
-        "chargeshield": p_shift < bands["threshold"],
+        # NOT the shipped policy engine. This is a single global threshold on
+        # the score. The real gate (app/policy/action_policy.py) uses
+        # amount-dependent bands, an evidence gate, a fabrication check, an
+        # amount cap and an economic floor, and it operates on the dispute
+        # queue -- transactions carry no reason_code or evidence, so it cannot
+        # be evaluated here. app/services/batch_runner.py prices the real gate.
+        "global_cost_threshold_rule": p_shift < bands["threshold"],
     }
 
     results = {}
     for name, mask in policies.items():
-        r = expected_cost(auto, t=np.nan, c=c, w=w, p=p_shift,
+        r = expected_cost(auto, t=None, c=c, w=w, p=p_shift,
                           weights=weights, contest=mask)
         results[name] = r
     base = results["defend_all"]["per_dispute_inr"]
@@ -169,6 +175,14 @@ def policy_comparison(df: pd.DataFrame, cfg: dict, bands: dict) -> dict:
         "assumed_win_rate_if_legitimate": w,
         "n_auto_decidable": len(auto),
         "policies": results,
+        "_note": (
+            "global_cost_threshold_rule is NOT the shipped policy engine -- it "
+            "is a single global threshold on the score, evaluated on "
+            "transactions (which carry no reason_code or evidence). The real "
+            "gate is priced on the dispute queue in "
+            "evaluation/batch_results.json:policy_comparison, where it is "
+            "slightly WORSE than the static rule overall."
+        ),
     }
 
 
@@ -368,8 +382,10 @@ def main() -> None:
             "and is read from disk.",
             "static_amount_rule is the cost-optimal policy available with NO "
             "model (contest iff expected recovery beats representment cost). "
-            "It is a far harder adversary than defend-none/defend-all, and the "
-            "gap to chargeshield is the value of the ML.",
+            "It is a far harder adversary than defend-none/defend-all.",
+            "NOTHING in this section is the shipped policy engine. See "
+            "evaluation/batch_results.json for the real gate priced on the "
+            "dispute queue.",
             "Policy comparison is on auto-decidable disputes only (amount <= "
             "cap) and is prior-shifted to the assumed dispute-queue fraud rate.",
             "Failure modes are ranked by share of unrecovered fraud VALUE, not "

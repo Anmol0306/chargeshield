@@ -1,5 +1,5 @@
 {
-  "created_utc": "2026-09-01T14:29:10+00:00",
+  "created_utc": "2026-09-02T18:27:41+00:00",
   "population": "IEEE-CIS held-out final 15%, chronological",
   "n_test": 88581,
   "detection_threshold": 0.24999999999999994,
@@ -56,7 +56,7 @@
     "n_auto_decidable": 80478,
     "policies": {
       "defend_none": {
-        "threshold": NaN,
+        "threshold": null,
         "total_inr": 559692402.6337925,
         "per_dispute_inr": 6954.601290213381,
         "n_contested": 0,
@@ -69,7 +69,7 @@
         "saving_vs_static_rule_inr_per_dispute": -2080.2797129479395
       },
       "defend_all": {
-        "threshold": NaN,
+        "threshold": null,
         "total_inr": 393005788.33956516,
         "per_dispute_inr": 4883.394074648539,
         "n_contested": 80478,
@@ -82,7 +82,7 @@
         "saving_vs_static_rule_inr_per_dispute": -9.07249738309747
       },
       "static_amount_rule": {
-        "threshold": NaN,
+        "threshold": null,
         "total_inr": 392275651.89516824,
         "per_dispute_inr": 4874.321577265441,
         "n_contested": 79595,
@@ -94,8 +94,8 @@
         "saving_vs_defend_all_inr_per_dispute": 9.07249738309747,
         "saving_vs_static_rule_inr_per_dispute": 0.0
       },
-      "chargeshield": {
-        "threshold": NaN,
+      "global_cost_threshold_rule": {
+        "threshold": null,
         "total_inr": 385513021.5550977,
         "per_dispute_inr": 4790.290782016174,
         "n_contested": 78168,
@@ -107,7 +107,8 @@
         "saving_vs_defend_all_inr_per_dispute": 93.10329263236508,
         "saving_vs_static_rule_inr_per_dispute": 84.03079524926761
       }
-    }
+    },
+    "_note": "global_cost_threshold_rule is NOT the shipped policy engine -- it is a single global threshold on the score, evaluated on transactions (which carry no reason_code or evidence). The real gate is priced on the dispute queue in evaluation/batch_results.json:policy_comparison, where it is slightly WORSE than the static rule overall."
   },
   "error_slices": {
     "amount_band": {
@@ -360,7 +361,8 @@
   "top_failure_mode": "Recall on ProductCD 'W' is 0.213 against 0.703 on every other product type. W is 79% of held-out transactions and carries 86% of all unrecovered fraud value. It is NOT an identity-data problem: non-W transactions that also lack identity data still recall at ~0.70. W is simply a population the model reads poorly.",
   "notes": [
     "Nothing here fits or selects. Every threshold was chosen on val and is read from disk.",
-    "static_amount_rule is the cost-optimal policy available with NO model (contest iff expected recovery beats representment cost). It is a far harder adversary than defend-none/defend-all, and the gap to chargeshield is the value of the ML.",
+    "static_amount_rule is the cost-optimal policy available with NO model (contest iff expected recovery beats representment cost). It is a far harder adversary than defend-none/defend-all.",
+    "NOTHING in this section is the shipped policy engine. See evaluation/batch_results.json for the real gate priced on the dispute queue.",
     "Policy comparison is on auto-decidable disputes only (amount <= cap) and is prior-shifted to the assumed dispute-queue fraud rate.",
     "Failure modes are ranked by share of unrecovered fraud VALUE, not by recall: a slice with poor recall on 40 rows is a curiosity."
   ]

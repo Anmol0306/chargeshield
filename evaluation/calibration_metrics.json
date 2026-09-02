@@ -97,7 +97,7 @@
   },
   "selected_threshold": 0.24999999999999994,
   "threshold_selected_on": "val_pick (post-calibration)",
-  "created_utc": "2026-09-01T13:39:40+00:00",
+  "created_utc": "2026-09-02T18:27:15+00:00",
   "notes": [
     "val does three jobs: early stopping, calibrator fitting, method selection. It is NOT a held-out estimate and is never reported as one.",
     "Calibrators are fit on val_fit and chosen on val_pick, a chronologically later slice neither of them saw.",
