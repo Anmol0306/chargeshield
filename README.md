@@ -184,6 +184,42 @@ Charts: `evaluation/charts/cost_curve.png`, `evaluation/charts/cost_prevalence.p
 ## AI evidence responder
 LLM output is an untrusted proposal. See "Policy engine".
 
+**The deterministic path was written first** (`app/services/template_response.py`),
+so the LLM is an enhancement to a system that already works rather than a
+dependency of it. `propose()` never raises: no key, no network, a timeout,
+malformed JSON, or schema violations twice in a row all end at the template.
+The demo runs with no network and no credential at all.
+
+The template *cannot* fabricate evidence — `cited_evidence` is derived from the
+evidence object, so no code path produces a citation for a document that does
+not exist. That makes it the safe floor; an LLM proposal can only be worse on
+that axis, which is why the gate checks fabrication on every proposal
+regardless of source.
+
+**`llm_service` validates shape, not content.** It deliberately does *not*
+strip fabricated citations before handing the proposal on — if it repaired
+them, the policy engine's fabrication rule would never fire and there would be
+no audit record showing the model tried it.
+
+### What is sent to the provider
+Reason code, dispute amount, the evidence **field names** on file, and the
+requirement list. Deliberately not sent: document ids (opaque, useless to the
+model) and **`p_fraud`** — the model's job is evidence assessment and drafting;
+the probability is the deterministic system's input. Keeping them apart means
+the LLM cannot launder a score into a decision.
+
+### Credentials
+`LLM_API_KEY` from the process environment (`OPENAI_API_KEY` accepted as a
+fallback). **No module in this project reads `.env`.** The key is never logged,
+printed, placed in an exception message, written to the audit log, or returned;
+every string this module logs passes through a scrubber as defence in depth,
+and provider exceptions are logged by type rather than message. Enforced by
+`tests/test_failure_modes.py`, which raises a provider error containing the key
+and asserts it never reaches `caplog`.
+
+`LLM_MODEL` and `LLM_BASE_URL` make the provider swappable — point `LLM_BASE_URL`
+at any OpenAI-compatible endpoint.
+
 ## Policy engine
 `app/policy/action_policy.py` — pure functions, no I/O, no LLM calls, no clock,
 no randomness. `decide()` cannot reach the network because it has no client and
