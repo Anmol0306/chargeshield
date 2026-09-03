@@ -96,8 +96,11 @@ class AuditLog:
     leaves every record before it intact and readable.
     """
 
-    def __init__(self, path: Path = DEFAULT_PATH):
-        self.path = Path(path)
+    def __init__(self, path: Path | None = None):
+        # Late-bound on purpose. `path: Path = DEFAULT_PATH` binds the module
+        # constant at definition time, so a test (or a deployment) could not
+        # redirect the audit log without reaching into the function object.
+        self.path = Path(path if path is not None else DEFAULT_PATH)
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def append(self, record: dict) -> None:

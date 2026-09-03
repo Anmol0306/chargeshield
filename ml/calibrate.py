@@ -45,10 +45,14 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.isotonic import IsotonicRegression
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
 
+from ml.calibrators import (
+    EPS,
+    IdentityCalibrator,
+    IsotonicCalibrator,
+    PlattCalibrator,
+)
 from ml.metrics import best_f1_threshold, point_metrics, ranking_metrics
 
 ARTIFACTS_DIR = Path("artifacts")
@@ -58,7 +62,6 @@ CHARTS_DIR = EVAL_DIR / "charts"
 
 VAL_FIT_FRACTION = 0.70
 N_BINS = 15
-EPS = 1e-6
 
 # Aggregate ECE is close to meaningless for this application: 92% of test rows
 # score below 0.05, so an overall ECE is almost entirely a measurement of the
@@ -97,76 +100,6 @@ def reliability_bins(y_true, y_prob, n_bins=N_BINS):
             continue
         rows.append((float(y_prob[m].mean()), float(y_true[m].mean()), int(m.sum())))
     return rows
-
-
-def _logit(p: np.ndarray) -> np.ndarray:
-    p = np.clip(p, EPS, 1 - EPS)
-    return np.log(p / (1 - p))
-
-
-class PlattCalibrator:
-    """Logistic regression on the log-odds of the model score.
-
-    Fitting on logit(p) rather than p is the standard formulation: it keeps the
-    transform well-behaved in the tails, where a fraud model spends most of its
-    decision-relevant mass. One slope, one intercept -- two parameters, which is
-    why it cannot overfit 62k rows.
-    """
-
-    name = "platt"
-
-    def fit(self, p, y):
-        self._lr = LogisticRegression(solver="lbfgs", C=1e6)  # near-unregularised
-        self._lr.fit(_logit(p).reshape(-1, 1), y)
-        return self
-
-    def predict(self, p):
-        return self._lr.predict_proba(_logit(p).reshape(-1, 1))[:, 1]
-
-    def params(self):
-        return {"slope": float(self._lr.coef_[0][0]),
-                "intercept": float(self._lr.intercept_[0])}
-
-
-class IsotonicCalibrator:
-    """Non-decreasing step function. Far more flexible than Platt, which is
-    exactly why it is chosen on data it was not fit to."""
-
-    name = "isotonic"
-
-    def fit(self, p, y):
-        # float64 deliberately. Predictions are persisted as float32 to keep the
-        # parquet small, but interpolating a step function in float32 makes
-        # adjacent steps differ by one ULP in the WRONG direction (~-1.2e-07),
-        # so the output is not monotone at float32 precision. Numerically
-        # irrelevant to any decision, but a calibrator whose output can decrease
-        # as the score increases is not a thing worth defending in a panel.
-        self._iso = IsotonicRegression(out_of_bounds="clip", y_min=0.0, y_max=1.0)
-        self._iso.fit(np.asarray(p, dtype=np.float64), y)
-        return self
-
-    def predict(self, p):
-        return self._iso.predict(np.asarray(p, dtype=np.float64))
-
-    def params(self):
-        return {"n_thresholds": int(len(self._iso.X_thresholds_))}
-
-
-class IdentityCalibrator:
-    """The uncalibrated model. Competes on equal terms -- if LightGBM's raw
-    logloss-trained output is already well calibrated, it should win, and
-    adding a calibration step would be unjustified complexity."""
-
-    name = "uncalibrated"
-
-    def fit(self, p, y):
-        return self
-
-    def predict(self, p):
-        return p
-
-    def params(self):
-        return {}
 
 
 def decision_region(y, p, lo=DECISION_REGION_MIN) -> dict:

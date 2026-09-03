@@ -148,3 +148,50 @@ Python's own `json.loads` also *reads* it back happily, so every test passed.
 **Lesson:** Round-tripping through the same library proves nothing about
 interoperability. The test that mattered was the one that made Python behave
 like a stricter consumer.
+
+---
+
+## Failure 06 — The calibrator artifact could only be loaded by the script that wrote it
+*Sep 3, `ml/calibrate.py`, found while wiring the API*
+
+**Problem:** `joblib.load("artifacts/calibrator.pkl")` raised
+`AttributeError: Can't get attribute 'PlattCalibrator' on <module '__main__'>`
+from every process except `python -m ml.calibrate` itself. The API could not
+load the calibrator at all, so `/score` and the demo would both have failed.
+
+**Cause:** The calibrator classes were defined in `ml/calibrate.py`, which is
+executed as `__main__`. Pickle records a class by its qualified path, so the
+artifact referenced `__main__.PlattCalibrator` — a name that only resolves
+inside the process that happened to be running that file as a script.
+
+**Fix:** Moved the classes to `ml/calibrators.py`, a module that is imported
+and never executed, so the pickled path is `ml.calibrators.PlattCalibrator` and
+resolves anywhere. Regenerated the artifact.
+
+**Lesson:** Every test and every pipeline stage ran the calibrator inside the
+process that created it, so nothing exercised the load path from a different
+entry point. The bug was invisible until a second consumer existed, and it
+would have appeared for the first time on demo day. Pickling anything defined
+in a `__main__` script is a latent failure that waits for the second caller —
+and "we always run it the same way" is exactly the assumption that stops being
+true when you ship an API.
+
+---
+
+## Failure 07 — `AuditLog`'s default path could not be redirected
+*Sep 3, `app/services/audit_service.py`, found while writing API tests*
+
+**Problem:** API tests appended to the real `evidence/audit_log.jsonl`. The
+obvious fix — monkeypatching `audit_service.DEFAULT_PATH` — had no effect.
+
+**Cause:** `def __init__(self, path: Path = DEFAULT_PATH)` binds the module
+constant at function-definition time, so patching the module attribute later
+changes nothing.
+
+**Fix:** `path: Path | None = None`, resolved against `DEFAULT_PATH` inside the
+body.
+
+**Lesson:** A default argument is evaluated once, at import. Using a module
+constant as one silently makes it un-overridable — which is a testing problem
+today and a deployment problem the first time the log needs to live somewhere
+else.

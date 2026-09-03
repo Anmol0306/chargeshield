@@ -379,7 +379,47 @@ make api
 ```
 
 ## API
-`POST /score` · `POST /disputes/analyze` · `POST /disputes/draft` ·
-`POST /disputes/validate` · `POST /batch/run` · `GET /audit/{id}` · `GET /health`
+```
+make api      # uvicorn app.main:app --reload  → http://127.0.0.1:8000/docs
+```
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /health` | Model artifacts loaded; whether an LLM credential is present (presence only, never any part of the value) |
+| `POST /score` | Calibrated `p_fraud` from a **partial** feature vector, plus the amount-dependent bands |
+| `POST /disputes/analyze` | Proposal (LLM or template) → policy decision → audit record |
+| `POST /disputes/draft` | Representment draft, returned **inside** the decision. Never submits anything |
+| `POST /disputes/validate` | Gate a caller-supplied proposal. No LLM. **This is the demo endpoint** |
+| `POST /batch/run` | Re-run the gate over the dispute queue (`?limit=`, `?write_audit=`) |
+| `GET /audit/{id}` | The record for a decision |
+
+**No endpoint returns a bare proposal.** A caller cannot obtain the LLM's
+suggestion without also obtaining the action the policy engine reached — an
+endpoint that returned ungated output would defeat the entire design.
+
+`/score` takes partial feature vectors because no caller has all 392. LightGBM
+learns a NaN direction at every split, so an absent feature is handled exactly
+as it was in training, where 76% of rows had no identity data. The response
+reports `features_supplied` so a caller can see whether it got a prediction
+from four features or four hundred.
+
+### The demo, in one call
+```bash
+curl -s localhost:8000/disputes/validate -H 'content-type: application/json' -d '{
+  "dispute_id":"disp_demo","reason_code":"NON_RECEIPT","amount_inr":6070,
+  "p_fraud":0.05,"evidence":{"shipping_proof":["doc_a"],"billing_proof":["doc_b"]},
+  "proposal":{"decision":"CONTEST","evidence_status":"SUFFICIENT",
+    "cited_evidence":["shipping_proof","access_activity_log"],"missing_evidence":[],
+    "reasoning_summary":"3-D Secure authentication confirms the cardholder.",
+    "draft_representment":"The transaction was authenticated via 3-D Secure."}}'
+```
+The evidence set is complete, so the contest would otherwise be allowed. The
+proposal cites an authentication record that was never collected:
+
+```
+action  HUMAN_REVIEW
+rule    proposal_cited_evidence_not_on_file
+fabricated_evidence  ["access_activity_log"]
+```
 
 ## Future work

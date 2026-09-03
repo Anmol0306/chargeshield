@@ -73,19 +73,51 @@ class DisputeProposal(BaseModel):
 
 
 class ScoreRequest(BaseModel):
+    """Partial feature vectors are fine — see ml/predict.py. Unsupplied
+    features are NaN, which is how 76% of the training set looked."""
+
     model_config = ConfigDict(extra="forbid")
-    transaction_id: int | None = None
-    amount_inr: float = Field(ge=0)
-    p_fraud: float | None = Field(default=None, ge=0.0, le=1.0)
+    features: dict[str, object] = Field(default_factory=dict)
+    amount_inr: float | None = Field(default=None, ge=0)
+
+
+class ScoreResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    p_fraud: float
+    p_fraud_raw: float
+    calibrator: str
+    features_supplied: int
+    features_expected: int
+    unrecognised_fields: list[str] = Field(default_factory=list)
+    indifference_threshold: float | None = None
+    review_band: tuple[float, float] | None = None
+    band_note: str | None = None
 
 
 class DisputeAnalysisRequest(BaseModel):
+    """`p_fraud` may be supplied directly, or derived from `features`."""
+
+    model_config = ConfigDict(extra="forbid")
+    dispute_id: str
+    reason_code: str
+    amount_inr: float = Field(ge=0)
+    p_fraud: float | None = Field(default=None, ge=0.0, le=1.0)
+    features: dict[str, object] = Field(default_factory=dict)
+    evidence: dict[str, list[str]] = Field(default_factory=dict)
+    use_llm: bool = True
+
+
+class ValidateRequest(BaseModel):
+    """Run the gate against a proposal the caller supplies. No LLM involved --
+    this is the endpoint that demonstrates the gate rejecting a proposal."""
+
     model_config = ConfigDict(extra="forbid")
     dispute_id: str
     reason_code: str
     amount_inr: float = Field(ge=0)
     p_fraud: float = Field(ge=0.0, le=1.0)
     evidence: dict[str, list[str]] = Field(default_factory=dict)
+    proposal: DisputeProposal
 
 
 class PolicyDecisionResponse(BaseModel):
@@ -105,3 +137,4 @@ class PolicyDecisionResponse(BaseModel):
     fabricated_evidence: list[str] = Field(default_factory=list)
     indifference_threshold: float
     review_band: tuple[float, float]
+    proposal: DisputeProposal | None = None
