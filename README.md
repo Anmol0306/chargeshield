@@ -371,12 +371,30 @@ rather than conclusive. Reproduced by `confound_check` in `ml/evaluate.py`.
   the specific numbers do not.
 
 ## Running locally
+```bash
+git clone <repo> && cd chargeshield
+# place train_transaction.csv and train_identity.csv in data/raw/
+python3 -m venv .venv && make setup
+make all      # ~83s end to end
+make api      # http://127.0.0.1:8000
 ```
-make setup
-make data        # requires data/raw/train_transaction.csv
-make all
-make api
-```
+
+`make all` runs: `data → baseline → train → calibrate → cost → evaluate →
+link → batch → test`. `make setup` uses `.venv/bin/python` when present and
+falls back to `python3`, so no target requires an activated venv.
+
+**Verified from a clean clone** (Sep 4): fresh `git clone`, fresh venv,
+`requirements.txt` only, Kaggle CSVs linked in. `make all` completed in 83s
+with 159 tests passing, and every headline number reproduced **bit-exactly**
+against the committed artifacts — baseline PR-AUC 0.223152, LightGBM 0.543100,
+best iteration 610, Platt selected, decision-region ECE 0.047840, 5,013
+disputes at queue fraud rate 0.486535, wasted representment 0.372712,
+ChargeShield ₹8,842.56/dispute vs static rule ₹8,824.66. The API served
+`/health`, `/score`, `/metrics` and the fabrication demo from that clone with
+no extra setup.
+
+The only things not in the repo are the Kaggle CSVs (1.35GB, gitignored) and
+`.env` (secrets). Everything else is regenerated.
 
 ## API
 ```
