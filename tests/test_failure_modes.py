@@ -232,3 +232,61 @@ def test_blank_key_is_treated_as_absent(monkeypatch):
     monkeypatch.setenv("LLM_API_KEY", "   ")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     assert L._api_key() is None and L.is_enabled() is False
+
+
+# --- provider portability -------------------------------------------------
+
+def test_json_mode_is_dropped_when_the_provider_rejects_it(with_key):
+    """JSON mode is the one call parameter that varies across OpenAI-compatible
+    providers. A 400 naming response_format means 'drop that parameter', not
+    'give up' — the system prompt already demands a bare JSON object."""
+    seen = []
+
+    class Rejected(Exception):
+        status_code = 400
+        code = "invalid_request_error"
+
+        def __str__(self):
+            return "'response_format' of type 'json_object' is not supported"
+
+    def picky(prompt, settings, api_key, json_mode=True):
+        seen.append(json_mode)
+        if json_mode:
+            raise Rejected()
+        return json.dumps({
+            "decision": "CONTEST", "evidence_status": "SUFFICIENT",
+            "missing_evidence": [], "cited_evidence": ["shipping_proof"],
+            "reasoning_summary": "ok", "draft_representment": ""})
+
+    proposal, source = propose(call_provider=picky)
+    assert seen == [True, False], "should retry once without JSON mode"
+    assert source == "llm"
+
+
+def test_json_mode_is_kept_when_the_failure_is_unrelated(with_key):
+    """A billing 429 or an auth 401 must not be mistaken for a parameter
+    problem — dropping JSON mode would not help and would muddy the diagnosis."""
+    seen = []
+
+    class Quota(Exception):
+        status_code = 429
+        code = "credit_balance_exhausted"
+
+    def broke(prompt, settings, api_key, json_mode=True):
+        seen.append(json_mode)
+        raise Quota()
+
+    assert propose(call_provider=broke)[1] == "template"
+    assert seen == [True, True], "JSON mode should not be dropped for a 429"
+
+
+def test_three_argument_providers_still_work(with_key):
+    """Existing call sites and tests inject a 3-argument stub. Adding a fourth
+    parameter must not break them."""
+    def legacy(prompt, settings, api_key):
+        return json.dumps({
+            "decision": "CONTEST", "evidence_status": "SUFFICIENT",
+            "missing_evidence": [], "cited_evidence": ["shipping_proof"],
+            "reasoning_summary": "ok", "draft_representment": ""})
+
+    assert propose(call_provider=legacy)[1] == "llm"

@@ -167,23 +167,67 @@ def build_user_prompt(*, reason_code: str, amount_inr: float,
     )
 
 
-def _call_provider(prompt: str, settings: LLMSettings, api_key: str) -> str:
+def _looks_like_unsupported_parameter(exc: Exception) -> bool:
+    """Did the provider reject a REQUEST PARAMETER rather than the request?
+
+    JSON mode is not universally supported. OpenAI accepts it, Groq accepts it
+    on most models, some models on some gateways do not. A 400 naming
+    response_format means "drop that parameter", not "give up" -- and since the
+    system prompt already demands a bare JSON object, dropping it usually still
+    yields parseable output.
+
+    Inspecting the message here is safe: nothing is logged from it, and the
+    decision it drives is a retry shape, not a credential path.
+    """
+    if getattr(exc, "status_code", None) not in (400, 404, 422):
+        return False
+    blob = f"{getattr(exc, 'code', '')} {exc}".lower()
+    return "response_format" in blob or "json_object" in blob or "json mode" in blob
+
+
+def _call_provider(prompt: str, settings: LLMSettings, api_key: str,
+                   json_mode: bool = True) -> str:
     """Single provider call. Imported lazily so the template path works even if
-    the provider SDK is not installed."""
+    the provider SDK is not installed.
+
+    `json_mode` is separable because it is the one parameter that varies across
+    OpenAI-compatible providers. Everything else in this call is portable, which
+    is what lets LLM_BASE_URL + LLM_MODEL swap providers with no code change.
+    """
     from openai import OpenAI
 
     client = OpenAI(api_key=api_key, base_url=settings.base_url,
                     timeout=settings.timeout)
-    response = client.chat.completions.create(
-        model=settings.model,
-        response_format={"type": "json_object"},
-        temperature=0,          # a compliance artifact should not be creative
-        messages=[
+    kwargs = {
+        "model": settings.model,
+        "temperature": 0,       # a compliance artifact should not be creative
+        "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ],
-    )
+    }
+    if json_mode:
+        kwargs["response_format"] = {"type": "json_object"}
+    response = client.chat.completions.create(**kwargs)
     return response.choices[0].message.content or ""
+
+
+def _invoke(call_provider, prompt, settings, api_key, json_mode: bool) -> str:
+    """Call the provider, passing json_mode only if the callable accepts it.
+
+    Tests inject a 3-argument stub; the real client takes a fourth. Inspecting
+    the signature keeps every existing test working without each one having to
+    know about a parameter it does not care about.
+    """
+    import inspect
+
+    try:
+        params = inspect.signature(call_provider).parameters
+        if len(params) >= 4:
+            return call_provider(prompt, settings, api_key, json_mode)
+    except (TypeError, ValueError):
+        pass
+    return call_provider(prompt, settings, api_key)
 
 
 def propose(
@@ -217,9 +261,10 @@ def propose(
     prompt = build_user_prompt(reason_code=reason_code, amount_inr=amount_inr,
                                evidence=evidence, requirements=requirements)
 
+    json_mode = True
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            raw = call_provider(prompt, settings, api_key)
+            raw = _invoke(call_provider, prompt, settings, api_key, json_mode)
             return DisputeProposal.model_validate(json.loads(raw)), "llm"
         except (json.JSONDecodeError, ValidationError) as exc:
             log.warning("LLM response rejected (attempt %d/%d): %s",
@@ -230,6 +275,9 @@ def propose(
             # timeout from an auth failure.
             log.warning("LLM call failed (attempt %d/%d): %s",
                         attempt, MAX_ATTEMPTS, type(exc).__name__)
+            if json_mode and _looks_like_unsupported_parameter(exc):
+                log.info("provider rejected JSON mode; retrying without it")
+                json_mode = False
 
     log.info("LLM unusable after %d attempts; using deterministic template",
              MAX_ATTEMPTS)

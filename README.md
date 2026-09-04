@@ -251,7 +251,14 @@ and provider exceptions are logged by type rather than message. Enforced by
 and asserts it never reaches `caplog`.
 
 `LLM_MODEL` and `LLM_BASE_URL` make the provider swappable — point `LLM_BASE_URL`
-at any OpenAI-compatible endpoint.
+at any OpenAI-compatible endpoint (OpenAI, Groq, Google AI Studio) with no code
+change. JSON mode is the one call parameter that varies between them, so a 400
+naming `response_format` triggers one retry without it rather than a failure;
+a 429 or 401 deliberately does not.
+
+```bash
+make llm-check    # one call per scenario, reports credential presence only
+```
 
 ## Policy engine
 `app/policy/action_policy.py` — pure functions, no I/O, no LLM calls, no clock,
