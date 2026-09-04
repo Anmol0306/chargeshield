@@ -95,6 +95,9 @@ def test_static_page_states_the_provenance_of_every_number(built):
     rather than on a literal phrase, so the wording can be improved without
     breaking the guarantee — an earlier version of this test pinned the string
     'Static preview' and failed the moment the copy was reworded."""
+    assert "Static preview" in built, "must carry the agreed label"
+    assert "precomputed by the ChargeShield Python engine" in built
+    assert "makes no API calls" in built
     assert "at build time" in built, "must say the determinations were precomputed"
     assert "not written by hand" in built, "must rule out hand-authored decisions"
     assert "not reimplemented in JavaScript" in built, "must rule out a JS port"

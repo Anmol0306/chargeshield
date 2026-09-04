@@ -62,7 +62,8 @@ SCENARIOS = [
 ]
 
 BANNER = """<div class="banner">
-<b>Where each number on this page came from.</b><br>
+<b>Static preview — outputs precomputed by the ChargeShield Python engine.</b>
+This page makes no API calls and needs no backend.<br><br>
 &sect;1 and &sect;3 are read from the committed evaluation artifacts — the same files
 the live <code>/metrics</code> endpoint serves, so they are identical either way.
 &sect;2's determinations were produced by the policy engine itself,
