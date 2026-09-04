@@ -3,7 +3,7 @@
 # `make api` fail for anyone who had not sourced it -- including a fresh clone.
 PYTHON ?= $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3)
 
-.PHONY: setup data baseline train calibrate cost evaluate link batch llm-check api test demo clean
+.PHONY: setup data baseline train calibrate cost evaluate link batch llm-check census api test demo clean
 
 setup:      ; $(PYTHON) -m pip install -r requirements.txt
 data:       ; $(PYTHON) -m ml.data_prep
@@ -15,6 +15,7 @@ evaluate:   ; $(PYTHON) -m ml.evaluate
 link:       ; $(PYTHON) -m ml.link_disputes
 batch:      ; $(PYTHON) -m app.services.batch_runner
 llm-check:  ; $(PYTHON) -m scripts.check_llm
+census:     ; $(PYTHON) -m scripts.test_census
 api:        ; $(PYTHON) -m uvicorn app.main:app --reload
 test:       ; $(PYTHON) -m pytest -v
 demo:       ; $(PYTHON) -m demo.run_demo $(ARGS)

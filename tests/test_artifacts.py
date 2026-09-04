@@ -27,7 +27,8 @@ def _strict(path: str) -> dict:
 @pytest.mark.parametrize("path", sorted(
     p for g in ARTIFACT_GLOBS for p in glob.glob(g)))
 def test_artifact_is_strictly_valid_json(path):
-    _strict(path)
+    parsed = _strict(path)
+    assert isinstance(parsed, (dict, list)) and parsed, f"{path} parsed to nothing"
 
 
 def test_evaluate_does_not_claim_to_price_the_real_gate():

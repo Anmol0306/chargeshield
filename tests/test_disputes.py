@@ -52,7 +52,9 @@ def disputes(payload):
 
 
 @pytest.fixture(scope="module")
-def test_split():
+def held_out_split():
+    """The held-out split itself. Named without a `test_` prefix so it is not
+    mistaken for a test case -- by a reader or by a census script."""
     p = PROCESSED / "test.parquet"
     if not p.exists():
         pytest.skip("run `make data` first")
@@ -61,8 +63,8 @@ def test_split():
 
 # --- anchoring ------------------------------------------------------------
 
-def test_every_dispute_anchors_to_a_real_held_out_transaction(disputes, test_split):
-    valid = set(test_split["TransactionID"].astype(int))
+def test_every_dispute_anchors_to_a_real_held_out_transaction(disputes, held_out_split):
+    valid = set(held_out_split["TransactionID"].astype(int))
     anchors = {d[NAMESPACE]["anchor_transaction_id"] for d in disputes}
     assert anchors <= valid, (
         f"{len(anchors - valid)} disputes anchor to transactions that are not "
@@ -82,11 +84,11 @@ def test_anchors_never_come_from_train_or_val(disputes):
         assert not (anchors & ids), f"{len(anchors & ids)} disputes anchor into {split}"
 
 
-def test_anchor_labels_match_the_real_labels(disputes, test_split):
+def test_anchor_labels_match_the_real_labels(disputes, held_out_split):
     """The label carried on the dispute must BE the transaction's label, not a
     copy that drifted."""
-    truth = dict(zip(test_split["TransactionID"].astype(int),
-                     test_split["isFraud"].astype(int)))
+    truth = dict(zip(held_out_split["TransactionID"].astype(int),
+                     held_out_split["isFraud"].astype(int)))
     for d in disputes:
         cs = d[NAMESPACE]
         assert cs["anchor_is_fraud"] == truth[cs["anchor_transaction_id"]], (
@@ -197,7 +199,7 @@ def test_generative_assumptions_are_recorded_in_the_output(payload):
     assert 0.0 < meta["queue_fraud_rate"] < 1.0
 
 
-def test_queue_is_far_more_adverse_than_the_transaction_population(disputes, test_split):
+def test_queue_is_far_more_adverse_than_the_transaction_population(disputes, held_out_split):
     """The entire point of generating a queue rather than sampling at random."""
     queue_rate = sum(d[NAMESPACE]["anchor_is_fraud"] for d in disputes) / len(disputes)
-    assert queue_rate > 5 * test_split["isFraud"].mean()
+    assert queue_rate > 5 * held_out_split["isFraud"].mean()

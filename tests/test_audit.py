@@ -29,8 +29,12 @@ def make_decision(**kw):
 
 
 def test_record_is_json_serialisable():
+    """Tuples, dataclasses and enums must all be converted. Assert the
+    round-trip rather than only the absence of an exception -- a serialiser
+    that silently dropped a field would still not raise."""
     r = build_record(dispute_id="disp_x", decision=make_decision(), config=CONFIG)
-    json.dumps(r)  # must not raise: tuples, dataclasses etc must be converted
+    restored = json.loads(json.dumps(r))
+    assert restored == r, "record did not survive a JSON round-trip unchanged"
 
 
 def test_record_captures_the_bands_in_force():

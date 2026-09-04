@@ -319,6 +319,40 @@ a parameter (`p_required_evidence_present = 0.70`), not an observation. The
 informative view is the slice where evidence is complete and the model actually
 drives the decision (n=2,477): CONTEST 72.8%, ACCEPT 13.6%, HUMAN_REVIEW 13.6%.
 
+## Tests
+```bash
+make test      # 214 cases
+make census    # what is actually asserted, and what is not
+```
+
+A raw pytest count flatters a suite, so the figure is broken down:
+
+| | |
+|---|---|
+| Behavioural test functions | **162** |
+| Meta / hygiene functions | 7 |
+| Empty scaffold files | **0** |
+| Functions asserting nothing | **0** |
+| Cases pytest collects | 214 |
+
+The gap between 169 functions and 214 collected cases is parametrisation, not
+duplication. `make census` fails the build if any test file or test function
+asserts nothing — the check that removed the last three, one of which turned
+out to be a fixture misnamed `test_*`.
+
+### Adversarial failure tests
+`tests/test_adversarial_llm.py` — 17 functions, 43 cases — attacks the gate from
+four directions: proposals lying about evidence, prompt injection inside free
+text, malformed structured output, and provider failure. In every case the
+required outcome is the same: a safe, explainable action, and never an
+unsubstantiated representment.
+
+**Every proposal in that file is constructed.** None was produced by a language
+model, and none is counted anywhere as an observed hallucination. The live
+provider check found no fabrication at all. These are engineering tests of a
+defence, and the distinction between "we tested for this" and "this happened" is
+one the project makes deliberately.
+
 ## Failure handling
 See [FAILURES.md](FAILURES.md) for what broke during the build and why.
 
