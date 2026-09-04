@@ -19,6 +19,12 @@ Nobody tells them which disputes are worth fighting.
 ## Architecture
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+**Full written guide:** [docs/ChargeShield-Guide.pdf](docs/ChargeShield-Guide.pdf)
+— 31 pages covering the problem, every module, the cost derivation, the policy
+engine, all 69 decisions, all 7 failures, the limitations, and anticipated
+questions. Regenerate with `python -m scripts.build_guide`; every number in it
+is read from the repository at build time.
+
 ## ML methodology
 ### Dataset
 [IEEE-CIS Fraud Detection](https://www.kaggle.com/competitions/ieee-fraud-detection),
