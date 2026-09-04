@@ -85,14 +85,26 @@ def test_committed_build_matches_the_current_engine(built):
         assert embedded[did]["rule"] == cur["rule"], f"{did} stale — run make static"
 
 
-def test_static_page_needs_no_backend(built):
-    """It must carry its own data, and say so."""
+def test_static_page_carries_its_own_data(built):
     assert "window.__STATIC__" in built
-    assert "Static preview" in built
     assert "policy engine" in built
 
 
-def test_static_page_does_not_claim_decisions_are_live(built):
-    """The banner must distinguish precomputed determinations from live ones."""
-    assert "at build time" in built
-    assert "not written by hand" in built
+def test_static_page_states_the_provenance_of_every_number(built):
+    """The page must say where its figures came from. Asserted on the SUBSTANCE
+    rather than on a literal phrase, so the wording can be improved without
+    breaking the guarantee — an earlier version of this test pinned the string
+    'Static preview' and failed the moment the copy was reworded."""
+    assert "at build time" in built, "must say the determinations were precomputed"
+    assert "not written by hand" in built, "must rule out hand-authored decisions"
+    assert "not reimplemented in JavaScript" in built, "must rule out a JS port"
+    assert "/metrics" in built, "must name where the figures come from"
+
+
+def test_static_page_never_implies_the_gate_ran_live(built):
+    """A viewer must not be able to read these determinations as live."""
+    banner = built[built.index('class="banner"'):built.index("</div>",
+                                                             built.index('class="banner"'))]
+    for claim in ("live decision", "real time", "real-time", "executed on click"):
+        assert claim not in banner.lower()
+    assert "make api" in banner, "must tell the reader how to run it live"

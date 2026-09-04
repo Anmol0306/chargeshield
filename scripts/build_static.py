@@ -62,12 +62,13 @@ SCENARIOS = [
 ]
 
 BANNER = """<div class="banner">
-<b>Static preview.</b> The four sections below are the real interface. Figures in
-&sect;1 and &sect;3 are read from the committed evaluation artifacts, exactly as the
-live <code>/metrics</code> endpoint serves them. The determinations in &sect;2 were
-produced by the actual policy engine — <code>app/policy/action_policy.py</code> —
-at build time, not written by hand and not reimplemented in JavaScript.<br><br>
-For the gate running live, one HTTP request per click:
+<b>Where each number on this page came from.</b><br>
+&sect;1 and &sect;3 are read from the committed evaluation artifacts — the same files
+the live <code>/metrics</code> endpoint serves, so they are identical either way.
+&sect;2's determinations were produced by the policy engine itself,
+<code>app/policy/action_policy.py</code>, at build time: not written by hand, and
+not reimplemented in JavaScript.<br><br>
+To watch the gate execute per click instead — one HTTP request per scenario —
 <code>git clone</code> &rarr; <code>make all</code> &rarr; <code>make api</code>.
 Built {built} from commit <code>{commit}</code>.
 </div>"""
@@ -122,6 +123,8 @@ def main() -> int:
     html = html.replace("<script>\nconst $ = id =>", inject + "<script>\nconst $ = id =>")
     html = html.replace('<div id="static-banner"></div>',
                         BANNER.format(built=date.today().isoformat(), commit=commit))
+    html = html.replace('$("m-generated").textContent = "Generated · " +',
+                        '$("m-generated").textContent = "Artifacts · " +')
     html = html.replace("<title>ChargeShield — decision record</title>",
                         "<title>ChargeShield — decision record</title>\n"
                         '<meta name="description" content="Cost-sensitive fraud '
