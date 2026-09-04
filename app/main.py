@@ -10,7 +10,9 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI
+import json
+
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
 from app.api import batch, disputes, score
@@ -43,6 +45,28 @@ def health() -> dict:
         "llm_credential_present": llm_service.is_enabled(),
         "llm_fallback": "deterministic template (app/services/template_response.py)",
     }
+
+
+@app.get("/metrics")
+def metrics() -> dict:
+    """Everything the dashboard needs, in one call.
+
+    Reads the committed evaluation artifacts rather than recomputing. The page
+    is a view of what `make all` produced -- if a number on screen disagrees
+    with the repo, the repo is wrong, not the page.
+    """
+    out: dict = {}
+    for key, path in (
+        ("evaluation", "evaluation/metrics.json"),
+        ("batch", "evaluation/batch_results.json"),
+        ("calibration", "evaluation/calibration_metrics.json"),
+        ("bands", "artifacts/policy_bands.json"),
+    ):
+        p = Path(path)
+        out[key] = json.loads(p.read_text()) if p.exists() else None
+    if all(v is None for v in out.values()):
+        raise HTTPException(status_code=503, detail="run `make all` first")
+    return out
 
 
 @app.get("/", include_in_schema=False)

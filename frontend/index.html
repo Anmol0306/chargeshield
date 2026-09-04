@@ -1,3 +1,277 @@
-<!-- One screen. Plain HTML + fetch. No React — see DECISIONS.md.
-     Blocks: headline counts | expected loss by policy | dispute queue |
-             AI decision panel showing PROPOSED vs POLICY DECISION -->
+<!doctype html>
+<meta charset="utf-8">
+<title>ChargeShield</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --line:#262b36; --ink:#e6e9ef; --dim:#98a1b3;
+    --accent:#5b9dff; --ok:#3ecf8e; --warn:#f0b429; --bad:#f2637e; --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1120px;margin:0 auto;padding:32px 24px 64px}
+  h1{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);
+     margin:32px 0 12px;font-weight:600}
+  .sub{color:var(--dim);margin:0 0 4px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .tile .v{font-size:26px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .tile .k{color:var(--dim);font-size:12px;margin-top:2px}
+  .tile .n{color:var(--dim);font-size:11px;margin-top:6px;line-height:1.4}
+  table{width:100%;border-collapse:collapse;background:var(--panel);
+        border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{padding:9px 14px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
+  th{color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+  tr:last-child td{border-bottom:none}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:13px}
+  tr.me td{background:rgba(91,157,255,.08)}
+  .scenarios{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  button{background:var(--panel);color:var(--ink);border:1px solid var(--line);
+         border-radius:8px;padding:9px 14px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--accent)}
+  button.on{border-color:var(--accent);background:rgba(91,157,255,.12)}
+  .gate{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:760px){.gate{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+  pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.5;white-space:pre-wrap;
+      word-break:break-word;color:var(--ink)}
+  .verdict{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .pill{font-family:var(--mono);font-size:12px;padding:4px 10px;border-radius:999px;font-weight:600}
+  .CONTEST{background:rgba(62,207,142,.15);color:var(--ok)}
+  .ACCEPT{background:rgba(240,180,41,.15);color:var(--warn)}
+  .HUMAN_REVIEW{background:rgba(242,99,126,.15);color:var(--bad)}
+  .rule{font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--warn);
+        border-radius:8px;padding:14px 16px;color:var(--dim);font-size:13.5px}
+  .note b{color:var(--ink)}
+  .note ul{margin:8px 0 0;padding-left:18px}
+  .note li{margin:4px 0}
+  .err{color:var(--bad);font-family:var(--mono);font-size:13px}
+  a{color:var(--accent)}
+</style>
+
+<div class="wrap">
+  <h1>ChargeShield</h1>
+  <p class="sub">Cost-sensitive fraud scoring + bounded chargeback defence.
+     The LLM proposes; a deterministic policy engine decides.</p>
+
+  <h2>Held-out performance</h2>
+  <div class="tiles" id="tiles"><div class="tile"><div class="v">…</div><div class="k">loading</div></div></div>
+
+  <h2>The gate — pick a scenario</h2>
+  <div class="scenarios" id="scenarios"></div>
+  <div class="gate">
+    <div class="card">
+      <h3>Proposal (untrusted)</h3>
+      <pre id="proposal">—</pre>
+    </div>
+    <div class="card">
+      <h3>Policy decision (deterministic)</h3>
+      <div class="verdict"><span class="pill" id="action">—</span><span class="rule" id="rule"></span></div>
+      <pre id="rationale">—</pre>
+    </div>
+  </div>
+
+  <h2>Policy comparison — dispute queue, realised cost, real labels</h2>
+  <table id="policies"><tbody><tr><td>loading…</td></tr></tbody></table>
+
+  <h2>Read this before the numbers</h2>
+  <div class="note" id="limits"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const inr = n => (n < 0 ? "\u2212₹" : "₹") + Math.abs(Math.round(n)).toLocaleString("en-IN");
+// Signed: the sign belongs outside the currency symbol, not inside the digits.
+const inrSigned = n => (n > 0 ? "+₹" : n < 0 ? "\u2212₹" : "₹") + Math.abs(Math.round(n)).toLocaleString("en-IN");
+const pct = n => (n * 100).toFixed(1) + "%";
+
+const COMPLETE = {shipping_proof:["doc_ship_001"], billing_proof:["doc_bill_001"]};
+
+// Each scenario is a proposal + dispute the gate evaluates live via
+// POST /disputes/validate. Nothing here is precomputed.
+const SCENARIOS = [
+  {label:"Clean, defensible", body:{
+    dispute_id:"demo_clean", reason_code:"NON_RECEIPT", amount_inr:6070, p_fraud:0.05,
+    evidence:COMPLETE,
+    proposal:{decision:"CONTEST", evidence_status:"SUFFICIENT",
+      cited_evidence:["shipping_proof","billing_proof"], missing_evidence:[],
+      reasoning_summary:"All required evidence is on file.",
+      draft_representment:"Representment submitted with proof of shipment and billing record."}}},
+
+  {label:"LLM invents 3-D Secure", body:{
+    dispute_id:"demo_fabricated", reason_code:"NON_RECEIPT", amount_inr:6070, p_fraud:0.05,
+    evidence:COMPLETE,
+    proposal:{decision:"CONTEST", evidence_status:"SUFFICIENT",
+      cited_evidence:["shipping_proof","access_activity_log"], missing_evidence:[],
+      reasoning_summary:"3-D Secure authentication confirms the cardholder authorised this.",
+      draft_representment:"The transaction was authenticated via 3-D Secure."}}},
+
+  {label:"Missing delivery proof", body:{
+    dispute_id:"demo_missing", reason_code:"NON_RECEIPT", amount_inr:6070, p_fraud:0.05,
+    evidence:{billing_proof:["doc_bill_001"]},
+    proposal:{decision:"CONTEST", evidence_status:"SUFFICIENT",
+      cited_evidence:["billing_proof"], missing_evidence:[],
+      reasoning_summary:"The billing record substantiates the charge.",
+      draft_representment:"Representment submitted."}}},
+
+  {label:"Likely genuine fraud", body:{
+    dispute_id:"demo_highp", reason_code:"FRAUD", amount_inr:6070, p_fraud:0.97,
+    evidence:{customer_communication:["doc_c"], billing_proof:["doc_b"]},
+    proposal:{decision:"CONTEST", evidence_status:"SUFFICIENT",
+      cited_evidence:["customer_communication","billing_proof"], missing_evidence:[],
+      reasoning_summary:"Evidence is complete, recommend contesting.",
+      draft_representment:"Representment submitted."}}},
+
+  {label:"Above the amount cap", body:{
+    dispute_id:"demo_cap", reason_code:"NON_RECEIPT", amount_inr:90000, p_fraud:0.05,
+    evidence:COMPLETE,
+    proposal:{decision:"CONTEST", evidence_status:"SUFFICIENT",
+      cited_evidence:["shipping_proof","billing_proof"], missing_evidence:[],
+      reasoning_summary:"All required evidence is on file.",
+      draft_representment:"Representment submitted."}}},
+];
+
+// Monotonic token: a slow response from an earlier click must never overwrite
+// a newer one. Without it, clicking two scenarios quickly can leave the wrong
+// verdict on screen — which is a bad failure for a demo about correctness.
+let pending = 0;
+
+async function runScenario(i){
+  const token = ++pending;
+  [...$("scenarios").children].forEach((b,j) => b.classList.toggle("on", i===j));
+  const s = SCENARIOS[i];
+
+  // Clear the verdict BEFORE awaiting. Otherwise the previous scenario's
+  // decision stays on screen next to the new proposal.
+  $("action").textContent = "…";
+  $("action").className = "pill";
+  $("rule").textContent = "";
+  $("rationale").textContent = "evaluating against the policy engine…";
+  $("proposal").textContent =
+    `decision        ${s.body.proposal.decision}\n` +
+    `cited_evidence  ${JSON.stringify(s.body.proposal.cited_evidence)}\n` +
+    `on file         ${JSON.stringify(Object.keys(s.body.evidence))}\n` +
+    `p(fraud)        ${s.body.p_fraud}\n` +
+    `amount          ${inr(s.body.amount_inr)}\n\n` +
+    s.body.proposal.reasoning_summary;
+
+  try{
+    const r = await fetch("/disputes/validate", {method:"POST",
+      headers:{"content-type":"application/json"}, body:JSON.stringify(s.body)});
+    const b = await r.json();
+    if(token !== pending) return;          // superseded by a later click
+    if(!r.ok) throw new Error(b.detail || r.statusText);
+    $("action").textContent = b.action;
+    $("action").className = "pill " + b.action;
+    $("rule").textContent = b.rule;
+    let out = b.rationale;
+    if(b.fabricated_evidence?.length)
+      out += `\n\nBLOCKED fabricated citation: ${b.fabricated_evidence.join(", ")}`;
+    if(b.missing_required_evidence?.length)
+      out += `\n\nMissing required: ${b.missing_required_evidence.join(", ")}`;
+    out += `\n\nproposal_honoured: ${b.proposal_honoured}`;
+    out += `\nreview band for ${inr(s.body.amount_inr)}: `
+         + `[${b.review_band[0].toFixed(3)}, ${b.review_band[1].toFixed(3)}]`
+         + `  ·  p* = ${b.indifference_threshold.toFixed(3)}`;
+    $("rationale").textContent = out;
+  }catch(e){
+    if(token !== pending) return;
+    $("action").textContent = "ERROR"; $("action").className = "pill HUMAN_REVIEW";
+    $("rule").textContent = ""; $("rationale").innerHTML =
+      `<span class="err">${e.message}</span>`;
+  }
+}
+
+function tile(v, k, n){
+  return `<div class="tile"><div class="v">${v}</div><div class="k">${k}</div>` +
+         (n ? `<div class="n">${n}</div>` : "") + `</div>`;
+}
+
+async function load(){
+  SCENARIOS.forEach((s,i) => {
+    const b = document.createElement("button");
+    b.textContent = s.label; b.onclick = () => runScenario(i);
+    $("scenarios").appendChild(b);
+  });
+  runScenario(1);   // open on the fabrication case — it is the point
+
+  let m;
+  try{
+    const r = await fetch("/metrics");
+    if(!r.ok) throw new Error((await r.json()).detail);
+    m = await r.json();
+  }catch(e){
+    $("tiles").innerHTML = `<div class="tile"><div class="v err">—</div>` +
+      `<div class="k">${e.message}</div></div>`;
+    return;
+  }
+
+  const lgb = m.evaluation?.detection?.lightgbm_calibrated;
+  const base = m.evaluation?.detection?.baseline_logistic_regression;
+  const w = m.batch?.wasted_representment;
+  const cal = m.calibration?.test?.calibrated_decision_region;
+
+  $("tiles").innerHTML = [
+    lgb && tile(lgb.pr_auc.toFixed(3), "PR-AUC, held-out test",
+      `LightGBM, calibrated. Baseline ${base.pr_auc.toFixed(3)}. Prevalence ${pct(lgb.prevalence)}.`),
+    w && tile(pct(w.wasted_rate), "Wasted representment effort",
+      `Contested ${w.contested.toLocaleString()}, of which ${w.contested_that_were_real_fraud.toLocaleString()} were genuine fraud. ` +
+      `Contest-everything wastes ${pct(w.contest_all_wasted_rate)}.`),
+    w && tile(pct(w.relative_reduction_vs_contest_all), "Reduction vs contest-all",
+      "Measured against real isFraud labels on the anchor transactions."),
+    cal && tile(cal.ece.toFixed(3), "ECE in the decision region",
+      `p ≥ ${cal.floor}, where the gate acts. Aggregate ECE flatters the model — 92% of rows score below 0.05.`),
+  ].filter(Boolean).join("");
+
+  const pc = m.batch?.policy_comparison;
+  const seg = m.batch?.policy_comparison_by_segment;
+  if(pc){
+    const order = ["defend_none","defend_all","static_amount_rule","chargeshield"];
+    const names = {defend_none:"Defend none", defend_all:"Defend all",
+                   static_amount_rule:"Static amount rule (no model)",
+                   chargeshield:"ChargeShield"};
+    $("policies").innerHTML =
+      "<thead><tr><th>Policy</th><th class='num'>₹/dispute</th>" +
+      "<th class='num'>vs defend-all</th><th class='num'>vs static rule</th></tr></thead><tbody>" +
+      order.map(k => {
+        const r = pc[k]; if(!r) return "";
+        return `<tr class="${k==='chargeshield'?'me':''}"><td>${names[k]}</td>` +
+          `<td class="num">${inr(r.per_dispute_inr)}</td>` +
+          `<td class="num">${inrSigned(r.saving_vs_defend_all_inr_per_dispute)}</td>` +
+          `<td class="num">${inrSigned(r.saving_vs_static_rule_inr_per_dispute)}</td></tr>`;
+      }).join("") +
+      (seg ? `<tr><td colspan="4" style="color:var(--dim);font-size:13px">
+        Where the gate can act (evidence on file, under the cap, n=${seg.actionable_complete_and_under_cap.n.toLocaleString()}):
+        <b style="color:var(--ok)">${inrSigned(seg.actionable_complete_and_under_cap.chargeshield_advantage_inr_per_dispute)}/dispute</b>.
+        Where evidence is missing (n=${seg.evidence_incomplete.n.toLocaleString()}):
+        <b style="color:var(--bad)">${inrSigned(seg.evidence_incomplete.chargeshield_advantage_inr_per_dispute)}/dispute</b> —
+        it pays ${inr(seg.human_review_overhead.cost_per_review_inr)} for a human rather than filing an unsubstantiated representment.
+      </td></tr>` : "") + "</tbody>";
+  }
+
+  $("limits").innerHTML = `<b>What is real, and what is not.</b>
+    <ul>
+      <li>Fraud metrics are on a temporally held-out 15% of IEEE-CIS, a public
+          benchmark. <b>Not Razorpay data.</b></li>
+      <li>The dispute layer is <b>synthetic</b>, shaped to Razorpay's documented
+          dispute entity. Each dispute is anchored to a real held-out transaction,
+          so it carries a real <code>isFraud</code> label — which is why wasted
+          representment effort is measurable and win rate is not.</li>
+      <li><b>No win-rate claim is made anywhere.</b> Real chargeback outcomes need
+          merchant-side resolution labels that are not public.</li>
+      <li>Rupee figures rest on stated assumptions
+          (<code>assumed_win_rate_if_legitimate</code>,
+          <code>assumed_dispute_fraud_rate</code>) swept in
+          <code>evaluation/cost_curve.json</code>. They are assumptions, not
+          measurements.</li>
+      <li>Across the whole queue ChargeShield costs <b>more</b> than the no-model
+          static rule. That is reported first, above, and the decomposition
+          explains what the difference buys.</li>
+    </ul>`;
+}
+load();
+</script>

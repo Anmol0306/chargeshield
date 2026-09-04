@@ -1,4 +1,4 @@
-.PHONY: setup data baseline train calibrate cost evaluate link batch api test demo clean
+.PHONY: setup data baseline train calibrate cost evaluate link batch llm-check api test demo clean
 
 setup:      ; pip install -r requirements.txt
 data:       ; python -m ml.data_prep
@@ -9,6 +9,7 @@ cost:       ; python -m ml.cost_curve
 evaluate:   ; python -m ml.evaluate
 link:       ; python -m ml.link_disputes
 batch:      ; python -m app.services.batch_runner
+llm-check:  ; python -m scripts.check_llm
 api:        ; uvicorn app.main:app --reload
 test:       ; pytest -v
 demo:       ; python demo/run_demo.py
