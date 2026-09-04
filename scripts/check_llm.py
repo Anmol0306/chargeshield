@@ -65,6 +65,16 @@ SCENARIOS = [
 ]
 
 
+_NO_CREDIT = (
+    "The account has no usable credit. This is a BILLING state, not a rate\n"
+    "    limit — retrying will never succeed and the backoff is wasted. Add\n"
+    "    credit at platform.openai.com/settings/organization/billing, or set\n"
+    "    LLM_BASE_URL and LLM_MODEL to another OpenAI-compatible provider.\n\n"
+    "    Nothing in ChargeShield is broken: every call degraded to the\n"
+    "    deterministic template, which is the designed behaviour."
+)
+
+
 def diagnose() -> None:
     """Make ONE direct call and report the provider's own error classification.
 
@@ -99,11 +109,11 @@ def diagnose() -> None:
             print(f"  provider code  : {code}")
 
         hints = {
-            "insufficient_quota":
-                "The account has no usable credit. This is a BILLING state, not\n"
-                "    a rate limit — retrying will never succeed. Add credit at\n"
-                "    platform.openai.com/settings/organization/billing, or point\n"
-                "    LLM_BASE_URL at another OpenAI-compatible provider.",
+            "insufficient_quota": _NO_CREDIT,
+            # Observed on this project 2026-09-04. OpenAI returns 429 for a
+            # billing state as well as for throttling, under several codes.
+            "credit_balance_exhausted": _NO_CREDIT,
+            "billing_hard_limit_reached": _NO_CREDIT,
             "rate_limit_exceeded":
                 "Genuine rate limiting. Wait and retry, or lower request volume.",
             "model_not_found":
@@ -115,10 +125,12 @@ def diagnose() -> None:
         if code in hints:
             print(f"\n  -> {hints[code]}")
         elif type(exc).__name__ == "RateLimitError":
-            print("\n  -> RateLimitError with no code. If every call fails "
-                  "instantly this is\n     almost always insufficient_quota "
-                  "(no credit) rather than throttling:\n     genuine throttling "
-                  "succeeds intermittently.")
+            known = f"code {code!r} is not one this script recognises" if code \
+                else "no code was returned"
+            print(f"\n  -> RateLimitError, and {known}. A 429 that fails\n"
+                  "     INSTANTLY on every call is a billing state rather than\n"
+                  "     throttling — genuine throttling succeeds intermittently.\n"
+                  f"\n  detail: {_scrub(str(exc))[:300]}")
         else:
             print(f"\n  detail: {_scrub(str(exc))[:300]}")
 
