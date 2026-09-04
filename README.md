@@ -260,6 +260,24 @@ a 429 or 401 deliberately does not.
 make llm-check    # one call per scenario, reports credential presence only
 ```
 
+**Live path verified** (Sep 4) against Groq, `openai/gpt-oss-120b`, ~1.2–1.8s
+per call. All three probes returned schema-valid JSON and the policy engine
+reached the right action on each: contest with complete evidence, HUMAN_REVIEW
+with `shipping_proof` absent, contest on a fraud claim with its required set.
+
+**The model did not fabricate.** The second probe is a deliberate temptation —
+`billing_proof` present, `shipping_proof` absent, on a non-receipt dispute — and
+the model correctly reported `INSUFFICIENT` and cited only what was on file
+rather than inventing a delivery record. That is a finding about this model on
+this prompt, not a guarantee, and it is the reason the fabrication scenario in
+`make demo` and on the dashboard is a **constructed** proposal, clearly labelled
+as such. The gate exists because a model *may* fabricate, not because this one
+did.
+
+The same run against OpenAI with an exhausted account produced three real 429s,
+two retries each, and three clean degradations to the template — so both the
+working path and the failure path are verified against live providers.
+
 ## Policy engine
 `app/policy/action_policy.py` — pure functions, no I/O, no LLM calls, no clock,
 no randomness. `decide()` cannot reach the network because it has no client and
