@@ -21,13 +21,46 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## ML methodology
 ### Dataset
-IEEE-CIS Fraud Detection (public benchmark). **Not** Razorpay data — the label
-is externally supplied, not authored by this project.
-<!-- TODO: cite the host's labelling-methodology post precisely, or drop the
-     chargeback-derivation claim entirely. Do not attribute it to Kaggle's
-     column description. -->
+[IEEE-CIS Fraud Detection](https://www.kaggle.com/competitions/ieee-fraud-detection),
+a public benchmark of real e-commerce transactions contributed by Vesta
+Corporation. **Not Razorpay data.** The `isFraud` label is externally supplied;
+this project did not author it.
+
 `TransactionAmt` is USD. Rupee figures are a labelled cost overlay at a stated
-conversion rate (config/costs.yaml), not a property of the dataset.
+conversion rate (`config/costs.yaml`), not a property of the dataset.
+
+#### What `isFraud` means — and why this project does not depend on the answer
+A description of the labelling methodology circulates widely and is attributed
+to the competition host: that a reported chargeback marks a transaction fraud,
+that later transactions linked by card, user account, email or billing address
+are marked fraud too, that transactions with nothing reported within 120 days
+are marked legitimate, and that genuinely fraudulent activity which was never
+reported is therefore labelled legitimate.
+
+**That attribution is repeated here as unverified.** It appears in secondary
+sources rather than one I could open: the host discussion thread
+([101203](https://www.kaggle.com/c/ieee-fraud-detection/discussion/101203))
+requires a Kaggle account, and this project does not cite sources it has not
+read. If you can open it, verify it — do not take this paragraph as
+confirmation.
+
+**The project is built so that it does not matter.** Nothing here requires the
+label to be chargeback-derived. What it requires is weaker and verifiable:
+
+- a real, externally-supplied binary label on real transactions, which is what
+  makes the fraud metrics honest rather than self-scored, and
+- that same label carried onto anchored disputes, which is what makes *wasted
+  representment effort* a measurement rather than a simulation.
+
+If the labelling methodology turns out to be something else entirely, every
+number in this README still stands, because none of them is derived from it.
+What would change is only how closely the modelled task resembles a real
+chargeback queue — which is already declared as a limitation below, alongside
+the fact that IEEE-CIS is US e-commerce rather than Indian payments.
+
+If the widely-repeated description *is* accurate, it implies label noise in a
+known direction: unreported fraud is labelled legitimate, so measured precision
+is a pessimistic estimate. This project does not claim that correction.
 
 ### Time split
 Chronological on `TransactionDT`: 70 / 15 / 15. Enforced by
