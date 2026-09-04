@@ -37,6 +37,7 @@ from app.models.schemas import DisputeProposal
 from app.policy.action_policy import decide
 from app.policy.thresholds import load_policy_config
 from app.services import llm_service
+from app.services.llm_service import _scrub
 
 REQUIREMENTS = {
     k: v for k, v in
@@ -62,6 +63,64 @@ SCENARIOS = [
      6_070.0, "REVIEW"),
     ("fraud claim, minimum evidence", "FRAUD", COMPLETE_FRAUD, 12_000.0, "CONTEST"),
 ]
+
+
+def diagnose() -> None:
+    """Make ONE direct call and report the provider's own error classification.
+
+    app/services/llm_service.py deliberately logs the exception TYPE and never
+    the message, because provider error text can carry request context. That is
+    the right default for a server log and the wrong one for a developer trying
+    to tell "no credits" from "too many requests" -- both surface as
+    RateLimitError.
+
+    This is a manually-run script, so it prints the structured fields
+    (status code, provider error code, error type) that actually distinguish
+    them. Everything printed still goes through _scrub().
+    """
+    settings = llm_service.load_settings()
+    key = os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
+    print("diagnostic: one direct call to classify the failure\n")
+    try:
+        llm_service._call_provider("Reply with {\"ok\":true}", settings, key)
+        print("  the direct call SUCCEEDED — the failure is in parsing or "
+              "validation, not the provider")
+        return
+    except Exception as exc:
+        print(f"  exception      : {type(exc).__name__}")
+        status = getattr(exc, "status_code", None)
+        if status is not None:
+            print(f"  http status    : {status}")
+        code = getattr(exc, "code", None)
+        body = getattr(exc, "body", None)
+        if code is None and isinstance(body, dict):
+            code = (body.get("error") or {}).get("code")
+        if code:
+            print(f"  provider code  : {code}")
+
+        hints = {
+            "insufficient_quota":
+                "The account has no usable credit. This is a BILLING state, not\n"
+                "    a rate limit — retrying will never succeed. Add credit at\n"
+                "    platform.openai.com/settings/organization/billing, or point\n"
+                "    LLM_BASE_URL at another OpenAI-compatible provider.",
+            "rate_limit_exceeded":
+                "Genuine rate limiting. Wait and retry, or lower request volume.",
+            "model_not_found":
+                f"The model {settings.model!r} is not available to this account.\n"
+                "    Set LLM_MODEL to one that is.",
+            "invalid_api_key":
+                "The credential was rejected. Check LLM_API_KEY in .env.",
+        }
+        if code in hints:
+            print(f"\n  -> {hints[code]}")
+        elif type(exc).__name__ == "RateLimitError":
+            print("\n  -> RateLimitError with no code. If every call fails "
+                  "instantly this is\n     almost always insufficient_quota "
+                  "(no credit) rather than throttling:\n     genuine throttling "
+                  "succeeds intermittently.")
+        else:
+            print(f"\n  detail: {_scrub(str(exc))[:300]}")
 
 
 def main() -> int:
@@ -135,7 +194,9 @@ def main() -> int:
     print("=" * 72)
     if failures:
         print(f"\n{failures} of {len(SCENARIOS)} scenarios fell back to the "
-              f"template. The live path is NOT working.")
+              f"template. The live path is NOT working.\n")
+        diagnose()
+        print()
         print("The system is still safe — that is what the fallback is for — but "
               "do not claim a working LLM path in the video.")
         return 1
