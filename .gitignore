@@ -13,6 +13,11 @@ evaluation/preds/*.parquet
 # Secrets
 .env
 
+# Personal sprint notes — contains availability/interview material and this
+# repo is public. Ignored rather than merely untracked, so `git add -A` cannot
+# pull it in by accident.
+SPRINT.md
+
 # Python
 __pycache__/
 *.py[cod]
