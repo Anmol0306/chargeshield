@@ -17,7 +17,7 @@ batch:      ; $(PYTHON) -m app.services.batch_runner
 llm-check:  ; $(PYTHON) -m scripts.check_llm
 api:        ; $(PYTHON) -m uvicorn app.main:app --reload
 test:       ; $(PYTHON) -m pytest -v
-demo:       ; $(PYTHON) -m demo.run_demo
+demo:       ; $(PYTHON) -m demo.run_demo $(ARGS)
 clean:      ; rm -rf artifacts/*.pkl evaluation/*.json evaluation/charts/*.png \
 	                 evaluation/preds/*.parquet evidence/audit_log.jsonl
 

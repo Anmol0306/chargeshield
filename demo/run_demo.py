@@ -10,10 +10,14 @@ IT IS ALSO A TEST
   Every scenario asserts its expected action and rule, and the script exits
   non-zero if any of them changes. So the thing being recorded and the thing
   being verified are the same artifact, and a demo cannot drift away from the
-  behaviour it claims to show.
+  behaviour it claims to show. tests/test_demo.py additionally asserts that
+  every policy rule which can fire has a scenario here.
 
 RUN
-  make demo          (equivalently: python -m demo.run_demo)
+  make demo                     everything (~180 lines, does not fit one screen)
+  make demo ARGS=--pause        stop between scenarios  <-- USE THIS TO RECORD
+  make demo ARGS="--only 2"     just the fabrication case
+  make demo ARGS=--list         list the scenarios
 
   Run as a MODULE, not a path. `python demo/run_demo.py` puts demo/ on
   sys.path instead of the repo root, and every `from app...` import fails.
@@ -21,6 +25,7 @@ RUN
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -42,6 +47,20 @@ W = 74
 COMPLETE = {"shipping_proof": ["doc_ship_001"], "billing_proof": ["doc_bill_001"]}
 NO_DELIVERY_PROOF = {"billing_proof": ["doc_bill_001"]}
 
+SCENARIOS: list[tuple[str, str, object]] = []
+
+
+def scenario(num: str, title: str):
+    """Register a scenario so --only and --pause can address it individually."""
+    def wrap(fn):
+        SCENARIOS.append((num, title, fn))
+        return fn
+    return wrap
+
+
+# --------------------------------------------------------------------------
+# presentation
+# --------------------------------------------------------------------------
 
 def rule(ch: str = "─") -> None:
     print(ch * W)
@@ -77,7 +96,7 @@ def show_proposal(p: DisputeProposal, source: str) -> None:
 
 def show_decision(d) -> None:
     print()
-    print(f"  POLICY ENGINE  (deterministic — no I/O, no LLM)")
+    print("  POLICY ENGINE  (deterministic — no I/O, no LLM)")
     print(f"    ACTION         : {d.action}")
     print(f"    rule           : {d.rule}")
     print(f"    honoured       : {d.proposal_honoured}")
@@ -89,25 +108,35 @@ def show_decision(d) -> None:
           f"   p* = {d.indifference_threshold:.3f}")
 
 
-def check(label: str, got, want) -> bool:
+def check(label: str, got, want) -> int:
+    """Print PASS/FAIL. Returns 1 on failure so callers can sum."""
     ok = got == want
     print(f"    {'PASS' if ok else 'FAIL'}  {label}: {got}"
           + ("" if ok else f"   (expected {want})"))
-    return ok
+    return 0 if ok else 1
 
 
-def main() -> int:
-    cfg = load_policy_config()
-    failures = 0
+def gate(cfg, p_fraud, amount, evidence, proposed, cited):
+    return decide(config=cfg, p_fraud=p_fraud, amount_inr=amount,
+                  reason_code="NON_RECEIPT", evidence=evidence,
+                  requirements=REQUIREMENTS, proposed_action=proposed,
+                  cited_evidence=cited)
 
-    print()
-    rule("═")
-    print("  ChargeShield — deterministic demo")
-    print("  No network. No API credential. This is the system, not a fallback.")
-    print(f"  LLM credential present: {llm_service.is_enabled()}")
-    rule("═")
 
-    # ---- 01 ------------------------------------------------------------
+FABRICATED = DisputeProposal(
+    decision="CONTEST", evidence_status="SUFFICIENT",
+    cited_evidence=["shipping_proof", "access_activity_log"],
+    reasoning_summary="3-D Secure authentication confirms the cardholder "
+                      "authorised this transaction.",
+    draft_representment="The transaction was authenticated via 3-D Secure.")
+
+
+# --------------------------------------------------------------------------
+# scenarios
+# --------------------------------------------------------------------------
+
+@scenario("01", "missing evidence")
+def _s01(cfg) -> int:
     header("01", "Missing evidence",
            "A contest that cannot be substantiated must not be filed.")
     show_dispute("NON_RECEIPT", 6_070, NO_DELIVERY_PROOF, 0.05)
@@ -115,60 +144,51 @@ def main() -> int:
         reason_code="NON_RECEIPT", amount_inr=6_070, evidence=NO_DELIVERY_PROOF,
         requirements=REQUIREMENTS, dispute_id="demo_01")
     show_proposal(prop, src)
-    d = decide(config=cfg, p_fraud=0.05, amount_inr=6_070,
-               reason_code="NON_RECEIPT", evidence=NO_DELIVERY_PROOF,
-               requirements=REQUIREMENTS, proposed_action=prop.decision,
-               cited_evidence=prop.cited_evidence)
+    d = gate(cfg, 0.05, 6_070, NO_DELIVERY_PROOF, prop.decision, prop.cited_evidence)
     show_decision(d)
     print()
-    failures += not check("action", d.action, "HUMAN_REVIEW")
-    failures += not check("rule", d.rule, "required_evidence_missing")
+    return (check("action", d.action, "HUMAN_REVIEW")
+            + check("rule", d.rule, "required_evidence_missing"))
 
-    # ---- 02 ------------------------------------------------------------
+
+@scenario("02", "fabricated evidence")
+def _s02(cfg) -> int:
     header("02", "The model fabricates evidence",
            "The evidence set is COMPLETE — this contest would otherwise be allowed.")
     show_dispute("NON_RECEIPT", 6_070, COMPLETE, 0.05)
-    fabricated = DisputeProposal(
-        decision="CONTEST", evidence_status="SUFFICIENT",
-        cited_evidence=["shipping_proof", "access_activity_log"],
-        reasoning_summary="3-D Secure authentication confirms the cardholder "
-                          "authorised this transaction.",
-        draft_representment="The transaction was authenticated via 3-D Secure.")
-    show_proposal(fabricated, "llm (constructed)")
+    show_proposal(FABRICATED, "llm (constructed)")
     print("    ^ access_activity_log was never collected for this dispute.")
-    d = decide(config=cfg, p_fraud=0.05, amount_inr=6_070,
-               reason_code="NON_RECEIPT", evidence=COMPLETE,
-               requirements=REQUIREMENTS, proposed_action=fabricated.decision,
-               cited_evidence=fabricated.cited_evidence)
+    d = gate(cfg, 0.05, 6_070, COMPLETE, FABRICATED.decision,
+             FABRICATED.cited_evidence)
     show_decision(d)
     print()
-    failures += not check("action", d.action, "HUMAN_REVIEW")
-    failures += not check("rule", d.rule, "proposal_cited_evidence_not_on_file")
-    failures += not check("proposal rejected", d.proposal_rejected, True)
+    return (check("action", d.action, "HUMAN_REVIEW")
+            + check("rule", d.rule, "proposal_cited_evidence_not_on_file")
+            + check("proposal rejected", d.proposal_rejected, True))
 
-    # ---- 03 ------------------------------------------------------------
+
+@scenario("03", "malformed JSON")
+def _s03(cfg) -> int:
     header("03", "Provider returns malformed JSON",
            "A broken model degrades to the template. It cannot break the pipeline.")
 
     def garbage(prompt, settings, api_key):
         return "I'm sorry, I can't help with that."
 
+    print(f"  provider returned : {garbage(None, None, None)!r}")
+    print(f"  retries           : {llm_service.MAX_ATTEMPTS} attempts, then template")
     prop, src = llm_service.propose(
         reason_code="NON_RECEIPT", amount_inr=6_070, evidence=COMPLETE,
         requirements=REQUIREMENTS, dispute_id="demo_03", call_provider=garbage)
-    print(f"  provider returned : {garbage(None, None, None)!r}")
-    print(f"  retries           : {llm_service.MAX_ATTEMPTS} attempts, then template")
     show_proposal(prop, src)
-    d = decide(config=cfg, p_fraud=0.05, amount_inr=6_070,
-               reason_code="NON_RECEIPT", evidence=COMPLETE,
-               requirements=REQUIREMENTS, proposed_action=prop.decision,
-               cited_evidence=prop.cited_evidence)
+    d = gate(cfg, 0.05, 6_070, COMPLETE, prop.decision, prop.cited_evidence)
     show_decision(d)
     print()
-    failures += not check("source", src, "template")
-    failures += not check("action", d.action, "CONTEST")
+    return check("source", src, "template") + check("action", d.action, "CONTEST")
 
-    # ---- 04 ------------------------------------------------------------
+
+@scenario("04", "provider unreachable")
+def _s04(cfg) -> int:
     header("04", "Provider unreachable",
            "An external dependency failing must not propagate. Verified against "
            "a live 429.")
@@ -180,86 +200,89 @@ def main() -> int:
         reason_code="NON_RECEIPT", amount_inr=6_070, evidence=COMPLETE,
         requirements=REQUIREMENTS, dispute_id="demo_04", call_provider=unreachable)
     show_proposal(prop, src)
-    d = decide(config=cfg, p_fraud=0.05, amount_inr=6_070,
-               reason_code="NON_RECEIPT", evidence=COMPLETE,
-               requirements=REQUIREMENTS, proposed_action=prop.decision,
-               cited_evidence=prop.cited_evidence)
+    d = gate(cfg, 0.05, 6_070, COMPLETE, prop.decision, prop.cited_evidence)
     show_decision(d)
     print()
-    failures += not check("source", src, "template")
-    failures += not check("action", d.action, "CONTEST")
+    return check("source", src, "template") + check("action", d.action, "CONTEST")
 
-    # ---- 05 ------------------------------------------------------------
+
+@scenario("05", "amount cap")
+def _s05(cfg) -> int:
     header("05", "Above the exposure cap",
            "Holds even if the score and the evidence are both perfect.")
     show_dispute("NON_RECEIPT", 90_000, COMPLETE, 0.01)
-    d = decide(config=cfg, p_fraud=0.01, amount_inr=90_000,
-               reason_code="NON_RECEIPT", evidence=COMPLETE,
-               requirements=REQUIREMENTS, proposed_action="CONTEST",
-               cited_evidence=["shipping_proof", "billing_proof"])
+    d = gate(cfg, 0.01, 90_000, COMPLETE, "CONTEST",
+             ["shipping_proof", "billing_proof"])
     show_decision(d)
     print()
-    failures += not check("action", d.action, "HUMAN_REVIEW")
-    failures += not check("rule", d.rule, "amount_cap_exceeded")
+    return (check("action", d.action, "HUMAN_REVIEW")
+            + check("rule", d.rule, "amount_cap_exceeded"))
 
-    # ---- 06 ------------------------------------------------------------
+
+@scenario("06", "high fraud probability")
+def _s06(cfg) -> int:
     header("06", "Likely genuine fraud",
            "Contesting real fraud burns the representment cost to lose.")
     show_dispute("NON_RECEIPT", 6_070, COMPLETE, 0.97)
-    d = decide(config=cfg, p_fraud=0.97, amount_inr=6_070,
-               reason_code="NON_RECEIPT", evidence=COMPLETE,
-               requirements=REQUIREMENTS, proposed_action="CONTEST",
-               cited_evidence=["shipping_proof", "billing_proof"])
+    d = gate(cfg, 0.97, 6_070, COMPLETE, "CONTEST",
+             ["shipping_proof", "billing_proof"])
     show_decision(d)
     print()
-    failures += not check("action", d.action, "ACCEPT")
-    failures += not check("rule", d.rule, "fraud_probability_above_band")
+    return (check("action", d.action, "ACCEPT")
+            + check("rule", d.rule, "fraud_probability_above_band"))
 
-    # ---- 07 ------------------------------------------------------------
+
+@scenario("07", "economic floor")
+def _s07(cfg) -> int:
     header("07", "Too small to be worth contesting",
            "No score and no evidence can change this. It is arithmetic.")
     show_dispute("NON_RECEIPT", 400, COMPLETE, 0.02)
     print(f"  even a certain win recovers ₹"
           f"{cfg.assumed_win_rate_if_legitimate * 400:,.0f} against a "
           f"₹{cfg.representment_cost_inr:,.0f} representment cost")
-    d = decide(config=cfg, p_fraud=0.02, amount_inr=400,
-               reason_code="NON_RECEIPT", evidence=COMPLETE,
-               requirements=REQUIREMENTS, proposed_action="CONTEST",
-               cited_evidence=["shipping_proof", "billing_proof"])
+    d = gate(cfg, 0.02, 400, COMPLETE, "CONTEST",
+             ["shipping_proof", "billing_proof"])
     show_decision(d)
     print()
-    failures += not check("action", d.action, "ACCEPT")
-    failures += not check("rule", d.rule,
-                          "dispute_too_small_to_repay_representment")
+    return (check("action", d.action, "ACCEPT")
+            + check("rule", d.rule, "dispute_too_small_to_repay_representment"))
 
-    # ---- 08 ------------------------------------------------------------
+
+@scenario("08", "amount-dependent band")
+def _s08(cfg) -> int:
     header("08", "The same p(fraud), two different answers",
            "The review band is amount-dependent. This is the cost model, visible.")
     print("  Identical score. Identical evidence. Only the amount differs.\n")
-    for amount, expect_action, expect_rule in (
+    failed = 0
+    for amount, want_action, want_rule in (
         (6_070, "HUMAN_REVIEW", "inside_cost_review_band"),
         (2_000, "ACCEPT", "fraud_probability_above_band"),
     ):
-        d = decide(config=cfg, p_fraud=0.88, amount_inr=amount,
-                   reason_code="NON_RECEIPT", evidence=COMPLETE,
-                   requirements=REQUIREMENTS, proposed_action="CONTEST",
-                   cited_evidence=["shipping_proof", "billing_proof"])
+        d = gate(cfg, 0.88, amount, COMPLETE, "CONTEST",
+                 ["shipping_proof", "billing_proof"])
         lo, hi = d.review_band
         print(f"  ₹{amount:>6,}   p=0.880   band [{lo:.3f}, {hi:.3f}]   "
               f"p*={d.indifference_threshold:.3f}   ->  {d.action}")
         print(f"           {d.rule}")
-        failures += not check(f"₹{amount:,} action", d.action, expect_action)
-        failures += not check(f"₹{amount:,} rule", d.rule, expect_rule)
+        failed += check(f"₹{amount:,} action", d.action, want_action)
+        failed += check(f"₹{amount:,} rule", d.rule, want_rule)
     print()
     print("  A larger dispute is worth contesting at higher fraud risk, so the")
     print("  band sits higher. At ₹6,070 p=0.88 is inside it and a human decides;")
     print("  at ₹2,000 the same score is already past it and we accept.")
+    return failed
 
-    # ---- audit ----------------------------------------------------------
+
+@scenario("audit", "audit record")
+def _audit(cfg) -> int:
+    """Self-contained: rebuilds its own decision rather than reusing another
+    scenario's locals, so `--only audit` works on its own."""
     header("AUDIT", "Every decision is reconstructable",
            "An unauditable gate is decoration.")
+    d = gate(cfg, 0.05, 6_070, COMPLETE, FABRICATED.decision,
+             FABRICATED.cited_evidence)
     record = build_record(dispute_id="demo_02", decision=d, config=cfg,
-                          proposal=fabricated.model_dump(), proposal_source="llm")
+                          proposal=FABRICATED.model_dump(), proposal_source="llm")
     for key in ("action", "rule", "rationale"):
         print(f"  {key:<16}: {str(record[key])[:56]}")
     print(f"  {'bands_in_force':<16}: {record['bands_in_force']['review_band']}")
@@ -267,12 +290,63 @@ def main() -> int:
           f"{record['cost_assumptions']['scenario']}, "
           f"c=₹{record['cost_assumptions']['representment_cost_inr']:.0f}, "
           f"w={record['cost_assumptions']['assumed_win_rate_if_legitimate']}")
+    return 0
+
+
+# --------------------------------------------------------------------------
+
+def parse_args(argv=None) -> argparse.Namespace:
+    ap = argparse.ArgumentParser(
+        prog="python -m demo.run_demo",
+        description="ChargeShield deterministic demo. No network, no credential.")
+    ap.add_argument("--pause", action="store_true",
+                    help="wait for Enter between scenarios (use this to record)")
+    ap.add_argument("--only", metavar="ID", nargs="+",
+                    help='run only these, e.g. --only 2  or  --only 01 08 audit')
+    ap.add_argument("--list", action="store_true", help="list scenarios and exit")
+    return ap.parse_args(argv)
+
+
+def main(argv=None) -> int:
+    args = parse_args(argv)
+
+    if args.list:
+        for num, title, _ in SCENARIOS:
+            print(f"  {num:>5}  {title}")
+        return 0
+
+    selected = SCENARIOS
+    if args.only:
+        wanted = {w.lstrip("0").lower() for w in args.only}
+        selected = [s for s in SCENARIOS if s[0].lstrip("0").lower() in wanted]
+        if not selected:
+            print(f"no scenario matches {args.only}. Try --list.")
+            return 2
+
+    cfg = load_policy_config()
+    failures = 0
+
+    print()
+    rule("═")
+    print("  ChargeShield — deterministic demo")
+    print("  No network. No API credential. This is the system, not a fallback.")
+    print(f"  LLM credential present: {llm_service.is_enabled()}")
+    rule("═")
+
+    for num, _title, fn in selected:
+        failures += fn(cfg)
+        if args.pause and num != selected[-1][0]:
+            try:
+                input("\n  [Enter for the next scenario]")
+            except (EOFError, KeyboardInterrupt):
+                print()
+                break
 
     print()
     rule("═")
     if failures:
-        print(f"  {failures} assertion(s) FAILED — the demo no longer matches the "
-              f"system.")
+        print(f"  {failures} assertion(s) FAILED — the demo no longer matches "
+              f"the system.")
         rule("═")
         return 1
     print("  All scenarios behaved as asserted. Recorded behaviour == tested "

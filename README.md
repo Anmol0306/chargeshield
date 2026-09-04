@@ -298,8 +298,15 @@ drives the decision (n=2,477): CONTEST 72.8%, ACCEPT 13.6%, HUMAN_REVIEW 13.6%.
 See [FAILURES.md](FAILURES.md) for what broke during the build and why.
 
 ```bash
-make demo    # runs with NO network and NO API credential
+make demo                     # everything, ~180 lines
+make demo ARGS=--pause        # stop between scenarios — use this to record
+make demo ARGS="--only 2"     # just the fabrication case
+make demo ARGS=--list         # list the scenarios
 ```
+
+Runs with **no network and no API credential**. The full run does not fit on
+one terminal screen, so `--pause` waits for Enter between scenarios — each one
+fits in frame and can be narrated separately.
 
 Eight scenarios, each asserting its expected action and rule. **The script
 exits non-zero if any outcome changes**, so the thing being recorded and the
