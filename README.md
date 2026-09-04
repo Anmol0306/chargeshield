@@ -262,7 +262,40 @@ informative view is the slice where evidence is complete and the model actually
 drives the decision (n=2,477): CONTEST 72.8%, ACCEPT 13.6%, HUMAN_REVIEW 13.6%.
 
 ## Failure handling
-See [FAILURES.md](FAILURES.md).
+See [FAILURES.md](FAILURES.md) for what broke during the build and why.
+
+```bash
+make demo    # runs with NO network and NO API credential
+```
+
+Eight scenarios, each asserting its expected action and rule. **The script
+exits non-zero if any outcome changes**, so the thing being recorded and the
+thing being tested are the same artifact — a policy change that would
+invalidate the video breaks the build instead of being discovered on playback
+(`tests/test_demo.py`).
+
+| # | Scenario | Result |
+|---|---|---|
+| 01 | Required evidence missing | HUMAN_REVIEW · `required_evidence_missing` |
+| 02 | Proposal cites evidence never collected | HUMAN_REVIEW, proposal rejected · `proposal_cited_evidence_not_on_file` |
+| 03 | Provider returns malformed JSON | retries once → template → CONTEST |
+| 04 | Provider unreachable | template → CONTEST |
+| 05 | Above the exposure cap | HUMAN_REVIEW · `amount_cap_exceeded` |
+| 06 | Likely genuine fraud | ACCEPT · `fraud_probability_above_band` |
+| 07 | Too small to repay a representment | ACCEPT · `dispute_too_small_to_repay_representment` |
+| 08 | Same p(fraud), two amounts | ₹6,070 → HUMAN_REVIEW; ₹2,000 → ACCEPT |
+
+Scenario 02 is the one to watch: the evidence set is **complete**, so the
+contest would otherwise be allowed. The proposal invents an
+`access_activity_log` that was never collected, and the gate names it.
+
+Scenario 08 shows the cost model rather than describing it — identical score,
+identical evidence, different amount, different action, because the review band
+is derived per dispute from `1 − (c±h)/(w·A)`.
+
+`tests/test_demo.py` also asserts that **every policy rule that can fire has a
+demo scenario**, so the demo cannot silently fall behind the engine. That test
+is what caught scenarios 07 and 08 being missing.
 
 ## Evaluation
 Full output: `evaluation/metrics.json`. Charts: `pr_curve.png`,

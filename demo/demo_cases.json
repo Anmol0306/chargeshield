@@ -1,7 +1,64 @@
 [
-  {"_comment": "The four scenarios you record. Each maps to a test in tests/."},
-  {"id": "demo_01", "scenario": "missing_evidence",  "expect": "HUMAN_REVIEW"},
-  {"id": "demo_02", "scenario": "hallucinated_3ds",  "expect": "REJECT_PROPOSAL"},
-  {"id": "demo_03", "scenario": "malformed_json",    "expect": "TEMPLATE_FALLBACK"},
-  {"id": "demo_04", "scenario": "adapter_timeout",   "expect": "QUEUED_NO_DUPLICATE"}
+  {
+    "_comment": "Scenarios recorded for the video. Each is asserted by demo/run_demo.py, which exits non-zero if any outcome changes \u2014 so the recording and the test are the same artifact."
+  },
+  {
+    "id": "demo_01",
+    "scenario": "missing_evidence",
+    "expect_rule": "required_evidence_missing",
+    "expect_action": "HUMAN_REVIEW",
+    "status": "implemented"
+  },
+  {
+    "id": "demo_02",
+    "scenario": "hallucinated_3ds",
+    "expect_rule": "proposal_cited_evidence_not_on_file",
+    "expect_action": "HUMAN_REVIEW",
+    "expect_proposal_rejected": true,
+    "status": "implemented"
+  },
+  {
+    "id": "demo_03",
+    "scenario": "malformed_json",
+    "expect_source": "template",
+    "expect_action": "CONTEST",
+    "status": "implemented"
+  },
+  {
+    "id": "demo_04",
+    "scenario": "provider_unreachable",
+    "expect_source": "template",
+    "expect_action": "CONTEST",
+    "status": "implemented",
+    "_note": "Replaces the original adapter_timeout case. The Razorpay adapter was cut (Tier 3, never started). This exercises the same property \u2014 an external dependency failing must not propagate \u2014 against the LLM provider, which is a dependency that actually exists in this build."
+  },
+  {
+    "id": "demo_05",
+    "scenario": "amount_cap",
+    "expect_rule": "amount_cap_exceeded",
+    "expect_action": "HUMAN_REVIEW",
+    "status": "implemented"
+  },
+  {
+    "id": "demo_06",
+    "scenario": "high_fraud_probability",
+    "expect_rule": "fraud_probability_above_band",
+    "expect_action": "ACCEPT",
+    "status": "implemented"
+  },
+  {
+    "id": "demo_07",
+    "scenario": "economic_floor",
+    "expect_rule": "dispute_too_small_to_repay_representment",
+    "expect_action": "ACCEPT",
+    "status": "implemented"
+  },
+  {
+    "id": "demo_08",
+    "scenario": "amount_dependent_review_band",
+    "expect_rule": "inside_cost_review_band",
+    "expect_action": "HUMAN_REVIEW",
+    "status": "implemented",
+    "_note": "Same p(fraud)=0.88 at two amounts. At INR 6,070 it lands inside the band (human decides); at INR 2,000 it is past the band (accept). Shows the cost model rather than describing it."
+  }
 ]
