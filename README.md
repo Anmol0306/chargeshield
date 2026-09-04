@@ -19,6 +19,13 @@ Nobody tells them which disputes are worth fighting.
 ## Architecture
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+**Live interface:** enable GitHub Pages on this repo (Settings &rarr; Pages &rarr;
+Deploy from branch &rarr; `main` / `/docs`) and `docs/index.html` is served as a
+static copy — the four real sections, with the §2 determinations produced by the
+actual policy engine at build time rather than written by hand. Rebuild with
+`make static`. For the gate running live, one HTTP request per click, use
+`make api`.
+
 **Full written guide:** [docs/ChargeShield-Guide.pdf](docs/ChargeShield-Guide.pdf)
 — 31 pages covering the problem, every module, the cost derivation, the policy
 engine, all 69 decisions, all 7 failures, the limitations, and anticipated

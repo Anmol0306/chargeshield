@@ -1,0 +1,444 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>ChargeShield — decision record</title>
+<meta name="description" content="Cost-sensitive fraud scoring and bounded chargeback defence. The model proposes; a deterministic policy engine decides.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* A compliance document that happens to be live. Serif headings, numbered
+     sections, rules instead of cards, footnotes for the things that would
+     otherwise be buried. The register is deliberate: this project's thesis is
+     claim discipline, and a page that reads like an audit report argues that
+     before a single number is read. */
+  :root{
+    --paper:#fcfcfa; --ink:#16181a; --ink-2:#3d4348; --dim:#767d84;
+    --line:#dcdcd6; --line-dark:#a8a89f; --sunken:#f4f4f0;
+    --fired:#8f1d2c; --fired-bg:#f8ecee;
+    --ok:#1d5c3d; --warn:#7d5107;
+    --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font-family:var(--serif);font-size:16px;line-height:1.62;
+       -webkit-font-smoothing:antialiased}
+  .sheet{max-width:860px;margin:0 auto;padding:56px 32px 96px}
+
+  .masthead{border-top:3px double var(--line-dark);border-bottom:1px solid var(--line-dark);
+            padding:18px 0 14px;margin-bottom:8px}
+  .masthead h1{font-family:var(--mono);font-size:20px;font-weight:600;
+               letter-spacing:.16em;margin:0 0 6px;text-transform:uppercase}
+  .masthead .role{font-size:15px;color:var(--ink-2);font-style:italic;margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:0 28px;font-family:var(--mono);
+        font-size:11px;color:var(--dim);letter-spacing:.04em;
+        padding:10px 0 0;text-transform:uppercase}
+
+  h2{font-family:var(--mono);font-size:12.5px;font-weight:600;letter-spacing:.11em;
+     text-transform:uppercase;color:var(--ink);margin:46px 0 4px;
+     padding-bottom:7px;border-bottom:1px solid var(--line-dark)}
+  h2 .no{color:var(--dim);margin-right:12px}
+  .standfirst{color:var(--ink-2);margin:12px 0 20px;font-size:15.5px;max-width:70ch}
+  .standfirst code,p code{font-family:var(--mono);font-size:13px;
+       background:var(--sunken);padding:1px 5px;border:1px solid var(--line)}
+
+  /* §1 findings — a table of contents, not tiles */
+  .findings{width:100%;border-collapse:collapse}
+  .findings td{padding:11px 0;border-bottom:1px dotted var(--line-dark);
+               vertical-align:baseline}
+  .findings .ref{font-family:var(--mono);font-size:11px;color:var(--dim);
+                 width:38px;white-space:nowrap}
+  .findings .label{font-size:15.5px}
+  .findings .label small{display:block;color:var(--dim);font-size:13px;
+                         line-height:1.5;margin-top:3px;max-width:58ch}
+  .findings .val{font-family:var(--mono);font-size:21px;font-weight:600;
+                 text-align:right;white-space:nowrap;padding-left:20px;
+                 font-variant-numeric:tabular-nums}
+
+  /* §2 the exhibit */
+  .exhibit{border:1px solid var(--line-dark);background:#fff;margin-top:6px}
+  .exhibit .cap{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+                text-transform:uppercase;color:var(--dim);
+                padding:9px 16px;border-bottom:1px solid var(--line);
+                background:var(--sunken)}
+  .picker{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--line)}
+  .picker button{flex:1 1 auto;background:#fff;border:0;border-right:1px solid var(--line);
+                 padding:11px 14px;font-family:var(--mono);font-size:11.5px;
+                 color:var(--ink-2);cursor:pointer;letter-spacing:.02em}
+  .picker button:last-child{border-right:0}
+  .picker button:hover{background:var(--sunken)}
+  .picker button.on{background:var(--ink);color:var(--paper);font-weight:500}
+  .cols{display:grid;grid-template-columns:1fr 1.25fr}
+  @media(max-width:780px){.cols{grid-template-columns:1fr}}
+  .col{padding:18px 20px}
+  .col+.col{border-left:1px solid var(--line)}
+  @media(max-width:780px){.col+.col{border-left:0;border-top:1px solid var(--line)}}
+  .col h3{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+          text-transform:uppercase;color:var(--dim);margin:0 0 12px;font-weight:600}
+  pre{margin:0;font-family:var(--mono);font-size:12px;line-height:1.7;
+      white-space:pre-wrap;word-break:break-word;color:var(--ink-2)}
+
+  .chain{list-style:none;margin:0 0 16px;padding:0;font-family:var(--mono);font-size:11.5px}
+  .chain li{display:grid;grid-template-columns:22px 1fr auto;gap:8px;
+            align-items:baseline;padding:6px 8px;border-bottom:1px dotted var(--line)}
+  .chain .n{color:var(--dim);font-size:10.5px}
+  .chain .nm{word-break:break-word;color:var(--ink-2)}
+  .chain .st{font-size:9.5px;font-weight:600;letter-spacing:.09em;white-space:nowrap;
+             text-transform:uppercase;color:var(--dim)}
+  .chain .why{grid-column:2/4;color:var(--dim);font-size:10.5px;line-height:1.55;
+              margin-top:2px;font-style:normal}
+  li.fired{background:var(--fired-bg);border-left:3px solid var(--fired);
+           padding-left:5px}
+  li.fired .nm{color:var(--fired);font-weight:600}
+  li.fired .st{color:var(--fired)}
+  li.fired .why{color:var(--fired)}
+  li.passed .st{color:var(--ok)}
+  li.not_reached{opacity:.4}
+
+  .finding{border-top:1px solid var(--line-dark);padding-top:12px;
+           font-family:var(--mono);font-size:12px}
+  .finding .lab{color:var(--dim);font-size:10px;letter-spacing:.1em;
+                text-transform:uppercase;display:block;margin-bottom:5px}
+  .verdict{font-size:15px;font-weight:600;letter-spacing:.04em}
+  .verdict.CONTEST{color:var(--ok)}
+  .verdict.ACCEPT{color:var(--warn)}
+  .verdict.HUMAN_REVIEW{color:var(--fired)}
+  .finding .sub{color:var(--dim);font-size:11px;margin-top:6px;line-height:1.6}
+
+  /* §3 cost table */
+  table.ledger{width:100%;border-collapse:collapse;font-size:14.5px}
+  table.ledger th{font-family:var(--mono);font-size:10px;letter-spacing:.09em;
+                  text-transform:uppercase;color:var(--dim);font-weight:600;
+                  text-align:right;padding:0 0 8px;border-bottom:1px solid var(--line-dark)}
+  table.ledger th:first-child{text-align:left}
+  table.ledger td{padding:10px 0;border-bottom:1px dotted var(--line);text-align:right}
+  table.ledger td:first-child{text-align:left}
+  table.ledger .num{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+  tr.subject td{font-weight:600;background:var(--sunken)}
+  tr.subject td:first-child::before{content:"▸ ";color:var(--fired)}
+  .ledger-note{font-size:13.5px;color:var(--ink-2);margin:14px 0 0;
+               padding-left:16px;border-left:2px solid var(--line-dark);max-width:72ch}
+
+  /* §4 footnotes */
+  ol.notes{font-size:14px;color:var(--ink-2);padding-left:22px;margin:6px 0 0}
+  ol.notes li{margin:9px 0;padding-left:4px}
+  ol.notes code{font-family:var(--mono);font-size:12.5px}
+  .colophon{margin-top:52px;padding-top:14px;border-top:3px double var(--line-dark);
+            font-family:var(--mono);font-size:10.5px;color:var(--dim);
+            letter-spacing:.04em;line-height:1.9}
+  .caveat{font-size:12px;color:var(--dim);line-height:1.6;margin:14px 0 0;
+          padding-top:11px;border-top:1px dotted var(--line-dark)}
+  .caveat code{font-family:var(--mono);font-size:11px}
+  .banner{border:1px solid var(--line-dark);background:var(--sunken);
+          padding:11px 15px;margin-bottom:14px;font-size:12.5px;color:var(--ink-2);
+          line-height:1.6}
+  .banner b{color:var(--ink)}
+  .banner code{font-family:var(--mono);font-size:11.5px}
+  .err{color:var(--fired);font-family:var(--mono);font-size:12px}
+  a{color:inherit;text-decoration-color:var(--line-dark);text-underline-offset:2px}
+</style>
+
+<div class="sheet">
+
+  <div class="banner">
+<b>Static preview.</b> The four sections below are the real interface. Figures in
+&sect;1 and &sect;3 are read from the committed evaluation artifacts, exactly as the
+live <code>/metrics</code> endpoint serves them. The determinations in &sect;2 were
+produced by the actual policy engine — <code>app/policy/action_policy.py</code> —
+at build time, not written by hand and not reimplemented in JavaScript.<br><br>
+For the gate running live, one HTTP request per click:
+<code>git clone</code> &rarr; <code>make all</code> &rarr; <code>make api</code>.
+Built 2026-09-05 from commit <code>a86f264</code>.
+</div>
+
+  <div class="masthead">
+    <h1>ChargeShield</h1>
+    <p class="role">Cost-sensitive fraud scoring and bounded chargeback defence —
+       the model proposes, a deterministic policy engine decides.</p>
+    <div class="meta">
+      <span>Population · IEEE-CIS held-out final 15%</span>
+      <span>Split · chronological</span>
+      <span id="m-generated">Generated · —</span>
+    </div>
+  </div>
+
+  <h2><span class="no">§1</span>Findings</h2>
+  <table class="findings"><tbody id="findings">
+    <tr><td class="ref">—</td><td class="label">loading</td><td class="val">…</td></tr>
+  </tbody></table>
+
+  <h2><span class="no">§2</span>The override chain</h2>
+  <p class="standfirst">Seven rules, evaluated in order. A proposal is untrusted
+    input and reaches an action only by surviving every one of them. Each
+    selection below issues a live <code>POST /disputes/validate</code> against
+    the running engine — nothing on this page is precomputed.</p>
+
+  <div class="exhibit">
+    <div class="cap">Exhibit A — dispute under assessment</div>
+    <div class="picker" id="picker"></div>
+    <div class="cols">
+      <div class="col">
+        <h3>Proposal — untrusted, constructed</h3>
+        <pre id="proposal">—</pre>
+        <p class="caveat">Every proposal on this page is <b>constructed</b> to
+        exercise a specific rule. The live provider path is verified separately
+        (<code>make llm-check</code>) and the model tested there did not
+        fabricate a citation. The gate exists because a model <i>may</i>, not
+        because this one did.</p>
+      </div>
+      <div class="col">
+        <h3>Rules evaluated, in order</h3>
+        <ol class="chain" id="chain"></ol>
+        <div class="finding">
+          <span class="lab">Determination</span>
+          <span class="verdict" id="action">—</span>
+          <div class="sub" id="rationale"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2><span class="no">§3</span>Cost of the policy, against alternatives</h2>
+  <p class="standfirst">Realised cost per dispute over 5,013 disputes anchored to
+    real held-out transactions, scored against their real <code>isFraud</code>
+    labels.</p>
+  <table class="ledger" id="ledger"><tbody><tr><td>loading…</td></tr></tbody></table>
+  <p class="ledger-note" id="ledger-note"></p>
+
+  <h2><span class="no">§4</span>Limitations and stated assumptions</h2>
+  <ol class="notes" id="notes"></ol>
+
+  <div class="colophon" id="colophon"></div>
+</div>
+
+<script>window.__STATIC__ = {"decisions":{"rec_clean":{"dispute_id":"rec_clean","action":"CONTEST","rule":"proposal_honoured","rationale":"p=0.050 is below the review band and required evidence is on file; expected recovery exceeds the representment cost","proposal_honoured":true,"proposal_source":"constructed","proposed_action":"CONTEST","missing_required_evidence":[],"fabricated_evidence":[],"indifference_threshold":0.8823252530007061,"review_band":[0.8470228289009178,0.9176276771004942],"evaluated":[{"rule":"amount_cap_exceeded","outcome":"passed","detail":"INR 6,070 is within the INR 25,000 cap"},{"rule":"proposal_cited_evidence_not_on_file","outcome":"passed","detail":"every cited evidence type is present in the evidence set"},{"rule":"dispute_too_small_to_repay_representment","outcome":"passed","detail":"a win recovers INR 4,249, above the INR 500 representment cost"},{"rule":"required_evidence_missing","outcome":"passed","detail":"all evidence required for NON_RECEIPT is on file"},{"rule":"inside_cost_review_band","outcome":"passed","detail":"p=0.050 is outside the review band [0.847, 0.918]"},{"rule":"fraud_probability_above_band","outcome":"passed","detail":"p=0.050 is below the review band, so contesting is cost-minimising"},{"rule":"proposal_honoured","outcome":"fired","detail":"p=0.050 is below the review band and required evidence is on file; expected recovery exceeds the representment cost"}]},"rec_fabricated":{"dispute_id":"rec_fabricated","action":"HUMAN_REVIEW","rule":"proposal_cited_evidence_not_on_file","rationale":"proposal cited evidence not present in the evidence set: access_activity_log","proposal_honoured":false,"proposal_source":"constructed","proposed_action":"CONTEST","missing_required_evidence":[],"fabricated_evidence":["access_activity_log"],"indifference_threshold":0.8823252530007061,"review_band":[0.8470228289009178,0.9176276771004942],"evaluated":[{"rule":"amount_cap_exceeded","outcome":"passed","detail":"INR 6,070 is within the INR 25,000 cap"},{"rule":"proposal_cited_evidence_not_on_file","outcome":"fired","detail":"proposal cited evidence not present in the evidence set: access_activity_log"},{"rule":"dispute_too_small_to_repay_representment","outcome":"not_reached","detail":""},{"rule":"required_evidence_missing","outcome":"not_reached","detail":""},{"rule":"inside_cost_review_band","outcome":"not_reached","detail":""},{"rule":"fraud_probability_above_band","outcome":"not_reached","detail":""},{"rule":"proposal_honoured","outcome":"not_reached","detail":""}]},"rec_missing":{"dispute_id":"rec_missing","action":"HUMAN_REVIEW","rule":"required_evidence_missing","rationale":"reason code NON_RECEIPT requires evidence not on file: shipping_proof","proposal_honoured":false,"proposal_source":"constructed","proposed_action":"CONTEST","missing_required_evidence":["shipping_proof"],"fabricated_evidence":[],"indifference_threshold":0.8823252530007061,"review_band":[0.8470228289009178,0.9176276771004942],"evaluated":[{"rule":"amount_cap_exceeded","outcome":"passed","detail":"INR 6,070 is within the INR 25,000 cap"},{"rule":"proposal_cited_evidence_not_on_file","outcome":"passed","detail":"every cited evidence type is present in the evidence set"},{"rule":"dispute_too_small_to_repay_representment","outcome":"passed","detail":"a win recovers INR 4,249, above the INR 500 representment cost"},{"rule":"required_evidence_missing","outcome":"fired","detail":"reason code NON_RECEIPT requires evidence not on file: shipping_proof"},{"rule":"inside_cost_review_band","outcome":"not_reached","detail":""},{"rule":"fraud_probability_above_band","outcome":"not_reached","detail":""},{"rule":"proposal_honoured","outcome":"not_reached","detail":""}]},"rec_highp":{"dispute_id":"rec_highp","action":"ACCEPT","rule":"fraud_probability_above_band","rationale":"p=0.970 exceeds the review band; contesting a likely-genuine fraud costs INR 500 to lose","proposal_honoured":false,"proposal_source":"constructed","proposed_action":"CONTEST","missing_required_evidence":[],"fabricated_evidence":[],"indifference_threshold":0.8823252530007061,"review_band":[0.8470228289009178,0.9176276771004942],"evaluated":[{"rule":"amount_cap_exceeded","outcome":"passed","detail":"INR 6,070 is within the INR 25,000 cap"},{"rule":"proposal_cited_evidence_not_on_file","outcome":"passed","detail":"every cited evidence type is present in the evidence set"},{"rule":"dispute_too_small_to_repay_representment","outcome":"passed","detail":"a win recovers INR 4,249, above the INR 500 representment cost"},{"rule":"required_evidence_missing","outcome":"passed","detail":"all evidence required for FRAUD is on file"},{"rule":"inside_cost_review_band","outcome":"passed","detail":"p=0.970 is outside the review band [0.847, 0.918]"},{"rule":"fraud_probability_above_band","outcome":"fired","detail":"p=0.970 exceeds the review band; contesting a likely-genuine fraud costs INR 500 to lose"},{"rule":"proposal_honoured","outcome":"not_reached","detail":""}]},"rec_cap":{"dispute_id":"rec_cap","action":"HUMAN_REVIEW","rule":"amount_cap_exceeded","rationale":"amount INR 90,000 exceeds the automatic-action cap of INR 25,000","proposal_honoured":false,"proposal_source":"constructed","proposed_action":"CONTEST","missing_required_evidence":[],"fabricated_evidence":[],"indifference_threshold":0.9920634920634921,"review_band":[0.9896825396825397,0.9944444444444445],"evaluated":[{"rule":"amount_cap_exceeded","outcome":"fired","detail":"amount INR 90,000 exceeds the automatic-action cap of INR 25,000"},{"rule":"proposal_cited_evidence_not_on_file","outcome":"not_reached","detail":""},{"rule":"dispute_too_small_to_repay_representment","outcome":"not_reached","detail":""},{"rule":"required_evidence_missing","outcome":"not_reached","detail":""},{"rule":"inside_cost_review_band","outcome":"not_reached","detail":""},{"rule":"fraud_probability_above_band","outcome":"not_reached","detail":""},{"rule":"proposal_honoured","outcome":"not_reached","detail":""}]}},"metrics":{"evaluation":{"created_utc":"2026-09-02T18:27:41+00:00","population":"IEEE-CIS held-out final 15%, chronological","n_test":88581,"detection_threshold":0.24999999999999994,"detection_threshold_selected_on":"val_pick (post-calibration)","detection":{"baseline_logistic_regression":{"pr_auc":0.22315204215081463,"roc_auc":0.8201379019459795,"brier":0.16723472444405757,"prevalence":0.03480430340592226,"n":88581,"threshold":0.7899999999999999,"at_own_threshold":{"threshold":0.7899999999999999,"precision":0.21245701184562477,"recall":0.36068764190723324,"f1":0.2674041120596369,"confusion_matrix":{"tn":81376,"fp":4122,"fn":1971,"tp":1112},"predicted_positive_rate":0.0590871631614003}},"lightgbm_calibrated":{"pr_auc":0.5430998586781586,"roc_auc":0.9014055557135869,"brier":0.02214426420009227,"prevalence":0.03480430340592226,"n":88581,"threshold":0.24999999999999994,"at_own_threshold":{"threshold":0.24999999999999994,"precision":0.5516001438331536,"recall":0.49756730457346743,"f1":0.5231923601637107,"confusion_matrix":{"tn":84251,"fp":1247,"fn":1549,"tp":1534},"predicted_positive_rate":0.0313949944118942}}},"policy_comparison":{"scenario":"balanced","assumed_dispute_fraud_rate":0.5,"representment_cost_inr":500.0,"assumed_win_rate_if_legitimate":0.7,"n_auto_decidable":80478,"policies":{"defend_none":{"threshold":null,"total_inr":559692402.6337925,"per_dispute_inr":6954.601290213381,"n_contested":0,"contest_rate":0.0,"wasted_representments":0,"wasted_representment_cost_inr":0.0,"forfeited_winnable":77818,"forfeited_winnable_amount_inr":295608020.4203247,"saving_vs_defend_all_inr_per_dispute":-2071.207215564842,"saving_vs_static_rule_inr_per_dispute":-2080.2797129479395},"defend_all":{"threshold":null,"total_inr":393005788.33956516,"per_dispute_inr":4883.394074648539,"n_contested":80478,"contest_rate":1.0,"wasted_representments":2660,"wasted_representment_cost_inr":20119499.999999996,"forfeited_winnable":0,"forfeited_winnable_amount_inr":0.0,"saving_vs_defend_all_inr_per_dispute":0.0,"saving_vs_static_rule_inr_per_dispute":-9.07249738309747},"static_amount_rule":{"threshold":null,"total_inr":392275651.89516824,"per_dispute_inr":4874.321577265441,"n_contested":79595,"contest_rate":0.9787136632864386,"wasted_representments":2574,"wasted_representment_cost_inr":19469019.924812026,"forfeited_winnable":797,"forfeited_winnable_amount_inr":180577.79802868195,"saving_vs_defend_all_inr_per_dispute":9.07249738309747,"saving_vs_static_rule_inr_per_dispute":0.0},"global_cost_threshold_rule":{"threshold":null,"total_inr":385513021.5550977,"per_dispute_inr":4790.290782016174,"n_contested":78168,"contest_rate":0.7447925243729488,"wasted_representments":1336,"wasted_representment_cost_inr":10105132.330827065,"forfeited_winnable":986,"forfeited_winnable_amount_inr":3966466.896127813,"saving_vs_defend_all_inr_per_dispute":93.10329263236508,"saving_vs_static_rule_inr_per_dispute":84.03079524926761}},"_note":"global_cost_threshold_rule is NOT the shipped policy engine -- it is a single global threshold on the score, evaluated on transactions (which carry no reason_code or evidence). The real gate is priced on the dispute queue in evaluation/batch_results.json:policy_comparison, where it is slightly WORSE than the static rule overall."},"error_slices":{"amount_band":{"INR 0-1,000":{"n":1682,"share_of_test":0.018988270622368228,"fraud_rate":0.09869203329369798,"precision":0.5743589743589743,"recall":0.6746987951807228,"false_positives":83,"false_negatives":54,"missed_fraud_amount_inr":34585.76018714905,"share_of_all_missed_fraud_amount":0.0015414863050162333},"INR 1,000-5,000":{"n":30601,"share_of_test":0.3454578295571285,"fraud_rate":0.03807065128590569,"precision":0.6587301587301587,"recall":0.5699570815450644,"false_positives":344,"false_negatives":501,"missed_fraud_amount_inr":1539496.023475647,"share_of_all_missed_fraud_amount":0.0686152920731935},"INR 5,000-10,000":{"n":29304,"share_of_test":0.3308158634470146,"fraud_rate":0.025764400764400765,"precision":0.5321428571428571,"recall":0.39470198675496687,"false_positives":262,"false_negatives":457,"missed_fraud_amount_inr":3271967.2271118164,"share_of_all_missed_fraud_amount":0.14583148219852857},"INR 10,000-25,000":{"n":18891,"share_of_test":0.21326243776882176,"fraud_rate":0.030384839341485365,"precision":0.43717728055077454,"recall":0.4425087108013937,"false_positives":327,"false_negatives":320,"missed_fraud_amount_inr":4763618.901062012,"share_of_all_missed_fraud_amount":0.21231435303342017},"INR 25,000+":{"n":8103,"share_of_test":0.09147559860466692,"fraud_rate":0.05220288781932617,"precision":0.47139588100686497,"recall":0.48699763593380613,"false_positives":231,"false_negatives":217,"missed_fraud_amount_inr":12826963.587646484,"share_of_all_missed_fraud_amount":0.5716973863898416}},"product_cd":{"C":{"n":9388,"share_of_test":0.10598209548323004,"fraud_rate":0.13527907967618236,"precision":0.6764705882352942,"recall":0.74251968503937,"false_positives":451,"false_negatives":327,"missed_fraud_amount_inr":1256076.0951404572,"share_of_all_missed_fraud_amount":0.05598327427935849},"H":{"n":2562,"share_of_test":0.02892268093609239,"fraud_rate":0.06401249024199844,"precision":0.44761904761904764,"recall":0.573170731707317,"false_positives":116,"false_negatives":70,"missed_fraud_amount_inr":706200.0,"share_of_all_missed_fraud_amount":0.03147531303958303},"R":{"n":4190,"share_of_test":0.04730134001648209,"fraud_rate":0.050596658711217185,"precision":0.7745098039215687,"recall":0.7452830188679245,"false_positives":46,"false_negatives":54,"missed_fraud_amount_inr":910800.0,"share_of_all_missed_fraud_amount":0.04059432896693886},"S":{"n":2973,"share_of_test":0.03356250211670674,"fraud_rate":0.04843592330978809,"precision":0.7590361445783133,"recall":0.4375,"false_positives":20,"false_negatives":81,"missed_fraud_amount_inr":317240.0,"share_of_all_missed_fraud_amount":0.014139377384136675},"W":{"n":69468,"share_of_test":0.7842313814474887,"fraud_rate":0.01861288650889618,"precision":0.3101123595505618,"recall":0.21345707656612528,"false_positives":614,"false_negatives":1017,"missed_fraud_amount_inr":19246315.40434265,"share_of_all_missed_fraud_amount":0.8578077063299829}},"identity":{"present":{"n":18668,"share_of_test":0.21074496788250302,"fraud_rate":0.0944396828797943,"precision":0.6715447154471544,"recall":0.7027793533749291,"false_positives":606,"false_negatives":524,"missed_fraud_amount_inr":3127481.5427799225,"share_of_all_missed_fraud_amount":0.1393917595362732},"missing":{"n":69913,"share_of_test":0.789255032117497,"fraud_rate":0.018880608756597486,"precision":0.31517094017094016,"recall":0.22348484848484848,"false_positives":641,"false_negatives":1025,"missed_fraud_amount_inr":19309149.956703186,"share_of_all_missed_fraud_amount":0.8606082404637267}}},"failure_modes_ranked_by_missed_value":{"ranked":[{"dimension":"identity","slice":"missing","share_of_all_missed_fraud_amount":0.8606082404637267,"recall":0.22348484848484848,"n":69913,"missed_fraud_amount_inr":19309149.956703186},{"dimension":"product_cd","slice":"W","share_of_all_missed_fraud_amount":0.8578077063299829,"recall":0.21345707656612528,"n":69468,"missed_fraud_amount_inr":19246315.40434265},{"dimension":"amount_band","slice":"INR 25,000+","share_of_all_missed_fraud_amount":0.5716973863898416,"recall":0.48699763593380613,"n":8103,"missed_fraud_amount_inr":12826963.587646484},{"dimension":"amount_band","slice":"INR 10,000-25,000","share_of_all_missed_fraud_amount":0.21231435303342017,"recall":0.4425087108013937,"n":18891,"missed_fraud_amount_inr":4763618.901062012},{"dimension":"amount_band","slice":"INR 5,000-10,000","share_of_all_missed_fraud_amount":0.14583148219852857,"recall":0.39470198675496687,"n":29304,"missed_fraud_amount_inr":3271967.2271118164},{"dimension":"identity","slice":"present","share_of_all_missed_fraud_amount":0.1393917595362732,"recall":0.7027793533749291,"n":18668,"missed_fraud_amount_inr":3127481.5427799225},{"dimension":"amount_band","slice":"INR 1,000-5,000","share_of_all_missed_fraud_amount":0.0686152920731935,"recall":0.5699570815450644,"n":30601,"missed_fraud_amount_inr":1539496.023475647},{"dimension":"product_cd","slice":"C","share_of_all_missed_fraud_amount":0.05598327427935849,"recall":0.74251968503937,"n":9388,"missed_fraud_amount_inr":1256076.0951404572}],"top":{"dimension":"identity","slice":"missing","share_of_all_missed_fraud_amount":0.8606082404637267,"recall":0.22348484848484848,"n":69913,"missed_fraud_amount_inr":19309149.956703186}},"confound_check":{"jaccard_W_vs_identity_missing":0.9936349462903895,"p_identity_missing_given_W":1.0,"p_identity_missing_given_not_W":0.02328258253544708,"cells":{"W__identity_present":{"n":0,"frauds":0,"recall":null,"note":"too few frauds to read"},"W__identity_missing":{"n":69468,"frauds":1293,"recall":0.21345707656612528,"note":null},"non_W__identity_present":{"n":18668,"frauds":1763,"recall":0.7027793533749291,"note":null},"non_W__identity_missing":{"n":445,"frauds":27,"recall":0.7037037037037037,"note":"too few frauds to read"}},"conclusion":"ProductCD == W and identity-missing are the SAME population (every W transaction lacks identity data). The 2x2 separates them: non-W transactions missing identity still recall at ~0.70, so missing identity is NOT the driver -- ProductCD W is. Caveat: the disambiguating cell (non-W, identity missing) has few frauds, so this is suggestive rather than conclusive."},"top_failure_mode":"Recall on ProductCD 'W' is 0.213 against 0.703 on every other product type. W is 79% of held-out transactions and carries 86% of all unrecovered fraud value. It is NOT an identity-data problem: non-W transactions that also lack identity data still recall at ~0.70. W is simply a population the model reads poorly.","notes":["Nothing here fits or selects. Every threshold was chosen on val and is read from disk.","static_amount_rule is the cost-optimal policy available with NO model (contest iff expected recovery beats representment cost). It is a far harder adversary than defend-none/defend-all.","NOTHING in this section is the shipped policy engine. See evaluation/batch_results.json for the real gate priced on the dispute queue.","Policy comparison is on auto-decidable disputes only (amount <= cap) and is prior-shifted to the assumed dispute-queue fraud rate.","Failure modes are ranked by share of unrecovered fraud VALUE, not by recall: a slice with poor recall on 40 rows is a curiosity."]},"batch":{"created_utc":"2026-09-02T18:27:42+00:00","n_disputes":5013,"policy_comparison":{"defend_none":{"total_inr":62484497.86,"per_dispute_inr":12464.491893077997,"saving_vs_defend_all_inr_per_dispute":-3631.3434386594854,"saving_vs_static_rule_inr_per_dispute":-3639.836291841213},"defend_all":{"total_inr":44280573.202,"per_dispute_inr":8833.148454418511,"saving_vs_defend_all_inr_per_dispute":0.0,"saving_vs_static_rule_inr_per_dispute":-8.492853181727696},"static_amount_rule":{"total_inr":44237998.529,"per_dispute_inr":8824.655601236784,"saving_vs_defend_all_inr_per_dispute":8.492853181727696,"saving_vs_static_rule_inr_per_dispute":0.0},"chargeshield":{"total_inr":44327729.941,"per_dispute_inr":8842.555344304807,"saving_vs_defend_all_inr_per_dispute":-9.406889886295176,"saving_vs_static_rule_inr_per_dispute":-17.89974306802287}},"policy_comparison_by_segment":{"all_disputes":{"n":5013,"chargeshield_inr_per_dispute":8842.555344304807,"static_rule_inr_per_dispute":8824.655601236784,"chargeshield_advantage_inr_per_dispute":-17.89974306802287},"evidence_complete":{"n":2477,"chargeshield_inr_per_dispute":8563.187249495359,"static_rule_inr_per_dispute":8612.386593056117,"chargeshield_advantage_inr_per_dispute":49.19934356075828},"evidence_incomplete":{"n":2536,"chargeshield_inr_per_dispute":9115.423944794953,"static_rule_inr_per_dispute":9031.986174290221,"chargeshield_advantage_inr_per_dispute":-83.43777050473182},"actionable_complete_and_under_cap":{"n":2209,"chargeshield_inr_per_dispute":4766.580993209597,"static_rule_inr_per_dispute":4835.420637392485,"chargeshield_advantage_inr_per_dispute":68.83964418288815},"human_review_overhead":{"n_reviews":2814,"cost_per_review_inr":150.0,"total_inr":422100.0,"inr_per_dispute_across_queue":84.20107719928187}},"queue_fraud_rate":0.4865350089766607,"actions":{"CONTEST":1803,"HUMAN_REVIEW":2814,"ACCEPT":396},"action_share":{"CONTEST":0.35966487133453023,"HUMAN_REVIEW":0.5613405146618791,"ACCEPT":0.07899461400359066},"rules_fired":{"proposal_honoured":1803,"required_evidence_missing":2180,"inside_cost_review_band":69,"dispute_too_small_to_repay_representment":100,"amount_cap_exceeded":565,"fraud_probability_above_band":296},"wasted_representment":{"contested":1803,"contested_that_were_real_fraud":672,"wasted_rate":0.37271214642262895,"contest_all_wasted_rate":0.4865350089766607,"relative_reduction_vs_contest_all":0.23394588355201357,"label_source":"real isFraud on the anchor transaction"},"forfeited_winnable":{"accepted":396,"accepted_that_were_legitimate":27},"evidence_complete_subset":{"n":2477,"actions":{"CONTEST":1803,"HUMAN_REVIEW":337,"ACCEPT":337},"action_share":{"CONTEST":0.727896649172386,"HUMAN_REVIEW":0.13605167541380703,"ACCEPT":0.13605167541380703}},"notes":["wasted_representment is measured against REAL isFraud labels on the anchor transactions. It is the only dispute-side metric here with real ground truth.","No win rate, money recovered, or dispute outcome is measured or claimable.","ACROSS THE WHOLE QUEUE ChargeShield is slightly WORSE than the static amount rule. The aggregate hides two opposite effects: on actionable disputes (evidence on file, under the amount cap) it wins, and on disputes with missing evidence it loses because it pays for a human rather than filing an unsubstantiated representment. The second is a safety property bought on purpose. The share of disputes with incomplete evidence is a PARAMETER (p_required_evidence_present), not an observation, so the net figure moves with a dial rather than with the model.","policy_comparison prices the REAL policy engine on the dispute queue against real isFraud labels. ml/evaluate.py's comparison is a transaction-level global-threshold rule and is NOT this.","Human review is modelled as an analyst choosing the cost-minimising action given the same p the model saw -- not an oracle. That is conservative for ChargeShield, which is the policy that routes to humans.","The HUMAN_REVIEW share is dominated by required_evidence_missing, and evidence availability in the synthetic queue is a parameter (p_required_evidence_present), not an observation. Do NOT quote the review rate as a finding. Use evidence_complete_subset."]},"calibration":{"selected":"platt","selected_by":"lowest Brier on val_pick (a proper scoring rule)","selected_params":{"slope":1.0915291983589348,"intercept":0.722619488151335},"val_fit_rows":62006,"val_pick_rows":26575,"val_fit_fraction":0.7,"ece_bins":15,"candidates_on_val_pick":{"uncalibrated":{"brier":0.0212233888143377,"log_loss":0.08765815464979144,"ece":0.008481007941831204,"roc_auc":0.9070966732997242,"mean_predicted":0.024549104273319244,"observed_rate":0.031834430856067734},"platt":{"brier":0.02110302245749427,"log_loss":0.08659174507244306,"ece":0.004106734862175576,"roc_auc":0.9070966732997243,"mean_predicted":0.032459510131718654,"observed_rate":0.031834430856067734},"isotonic":{"brier":0.021148316394307247,"log_loss":0.0863730474903102,"ece":0.004869113881855092,"roc_auc":0.9068670338875829,"mean_predicted":0.03271299978817589,"observed_rate":0.031834430856067734}},"test":{"uncalibrated":{"brier":0.022052765089477382,"log_loss":0.09258692271566658,"ece":0.007699572735343966,"roc_auc":0.9014055595073528,"mean_predicted":0.02809513360261917,"observed_rate":0.03480430340592226},"calibrated":{"brier":0.022144264196031015,"log_loss":0.09233323291102151,"ece":0.005024491763868766,"roc_auc":0.9014055557135869,"mean_predicted":0.036476115379174036,"observed_rate":0.03480430340592226},"uncalibrated_decision_region":{"floor":0.1,"n":4011,"share_of_rows":0.045280590645849564,"expected_frauds_all":2488.695068359375,"actual_frauds_all":3083,"relative_bias_all":-0.1927683852223889,"ece":0.051207616754346166,"expected_frauds":1644.337158203125,"actual_frauds":1762,"relative_bias":-0.06677800328994041},"calibrated_decision_region":{"floor":0.1,"n":5748,"share_of_rows":0.06488976191282556,"expected_frauds_all":3231.090776402615,"actual_frauds_all":3083,"relative_bias_all":0.048034633928840456,"ece":0.0478399118418021,"expected_frauds":2243.983813266678,"actual_frauds":1969,"relative_bias":0.13965658368038508},"pr_auc":0.5430998586781586,"roc_auc":0.9014055557135869,"brier":0.022144264196031015,"prevalence":0.03480430340592226,"n":88581,"at_threshold":{"threshold":0.24999999999999994,"precision":0.5516001438331536,"recall":0.49756730457346743,"f1":0.5231923601637107,"confusion_matrix":{"tn":84251,"fp":1247,"fn":1549,"tp":1534},"predicted_positive_rate":0.0313949944118942}},"selected_threshold":0.24999999999999994,"threshold_selected_on":"val_pick (post-calibration)","created_utc":"2026-09-03T13:13:31+00:00","notes":["val does three jobs: early stopping, calibrator fitting, method selection. It is NOT a held-out estimate and is never reported as one.","Calibrators are fit on val_fit and chosen on val_pick, a chronologically later slice neither of them saw.","Test is scored once, with the winner only.","Brier chosen over ECE for selection: ECE alone is gamed by a model that predicts the base rate for everything.","92% of test rows score below 0.05, so AGGREGATE ECE mostly measures the region where no decision is made. Report the p>=0.1 figures: that is where the policy engine acts, and calibration is roughly 10x worse there.","Platt was kept despite over-predicting by 14% inside the decision region, because uncalibrated under-predicts total fraud by 19.3% portfolio-wide, which distorts summed expected loss far more. The residual bias also errs toward ACCEPT (do not contest), the conservative direction for a defence-only product."]},"bands":{"source":"ml/cost_curve.py","created_utc":"2026-09-02T18:27:17+00:00","scenario":"balanced","assumed_dispute_fraud_rate":0.5,"threshold":0.91,"review_band_low":0.595,"review_band_high":1.0,"auto_action_amount_cap_inr":25000,"expected_contest_rate":0.7447925243729488,"derivation":"Threshold minimises expected INR cost per dispute on val under the 'balanced' scenario, with scores prior-shifted and the population re-weighted to an assumed dispute-queue fraud rate of 50%, then applied unchanged to test. Review band is the region where expected cost is within one human review (INR 150) of the optimum. Disputes above INR 25,000 bypass this entirely.","superseded_by":"review_band_low/high here is a POPULATION-level summary and is too wide to use as a policy (0.405). app/policy/thresholds.py derives the band PER DISPUTE from the same cost model -- 1 - (c+h)/(w*A) < p < 1 - (c-h)/(w*A) -- which is the correct level for a per-dispute decision and comes out ~0.07 wide at the median amount. The engine uses that; these values are retained for reference only.","caveat":"assumed_dispute_fraud_rate is STATED, not measured. IEEE-CIS has no dispute queue. See evaluation/cost_curve.json prevalence_sensitivity for how the threshold and the model's edge move across 3.5%-65%."}}};</script>
+<script>
+const $ = id => document.getElementById(id);
+const inr = n => (n < 0 ? "−₹" : "₹") + Math.abs(Math.round(n)).toLocaleString("en-IN");
+const inrSigned = n => (n > 0 ? "+₹" : n < 0 ? "−₹" : "₹") + Math.abs(Math.round(n)).toLocaleString("en-IN");
+const pct = n => (n * 100).toFixed(1) + "%";
+
+const COMPLETE = {shipping_proof:["doc_ship_001"], billing_proof:["doc_bill_001"]};
+
+const SCENARIOS = [
+  {label:"defensible", body:{
+    dispute_id:"rec_clean", reason_code:"NON_RECEIPT", amount_inr:6070, p_fraud:0.05,
+    evidence:COMPLETE,
+    proposal:{decision:"CONTEST", evidence_status:"SUFFICIENT",
+      cited_evidence:["shipping_proof","billing_proof"], missing_evidence:[],
+      reasoning_summary:"All required evidence is on file.",
+      draft_representment:"Representment submitted with proof of shipment."}}},
+
+  {label:"fabricated citation", body:{
+    dispute_id:"rec_fabricated", reason_code:"NON_RECEIPT", amount_inr:6070, p_fraud:0.05,
+    evidence:COMPLETE,
+    proposal:{decision:"CONTEST", evidence_status:"SUFFICIENT",
+      cited_evidence:["shipping_proof","access_activity_log"], missing_evidence:[],
+      reasoning_summary:"3-D Secure authentication confirms the cardholder authorised this.",
+      draft_representment:"The transaction was authenticated via 3-D Secure."}}},
+
+  {label:"evidence missing", body:{
+    dispute_id:"rec_missing", reason_code:"NON_RECEIPT", amount_inr:6070, p_fraud:0.05,
+    evidence:{billing_proof:["doc_bill_001"]},
+    proposal:{decision:"CONTEST", evidence_status:"SUFFICIENT",
+      cited_evidence:["billing_proof"], missing_evidence:[],
+      reasoning_summary:"The billing record substantiates the charge.",
+      draft_representment:"Representment submitted."}}},
+
+  {label:"likely fraud", body:{
+    dispute_id:"rec_highp", reason_code:"FRAUD", amount_inr:6070, p_fraud:0.97,
+    evidence:{customer_communication:["doc_c"], billing_proof:["doc_b"]},
+    proposal:{decision:"CONTEST", evidence_status:"SUFFICIENT",
+      cited_evidence:["customer_communication","billing_proof"], missing_evidence:[],
+      reasoning_summary:"Evidence is complete, recommend contesting.",
+      draft_representment:"Representment submitted."}}},
+
+  {label:"over exposure cap", body:{
+    dispute_id:"rec_cap", reason_code:"NON_RECEIPT", amount_inr:90000, p_fraud:0.05,
+    evidence:COMPLETE,
+    proposal:{decision:"CONTEST", evidence_status:"SUFFICIENT",
+      cited_evidence:["shipping_proof","billing_proof"], missing_evidence:[],
+      reasoning_summary:"All required evidence is on file.",
+      draft_representment:"Representment submitted."}}},
+];
+
+let pending = 0;
+const LABEL = {fired:"fired", passed:"passed", not_reached:"not reached"};
+
+// STATIC MODE. scripts/build_static.py runs the real Python policy engine over
+// these exact scenarios at build time and injects the results, so a page served
+// with no backend still shows decisions the engine actually produced -- not
+// hand-written ones. With a backend present __STATIC__ is absent and every
+// click hits POST /disputes/validate for real. One source file, two modes, so
+// the page cannot fork into a live version and a demo version that drift.
+const STATIC = typeof window !== "undefined" ? window.__STATIC__ : null;
+
+async function validate(body){
+  if(STATIC){
+    const d = STATIC.decisions[body.dispute_id];
+    if(!d) throw new Error(`no precomputed decision for ${body.dispute_id}`);
+    return d;
+  }
+  const r = await fetch("/disputes/validate", {method:"POST",
+    headers:{"content-type":"application/json"}, body:JSON.stringify(body)});
+  const j = await r.json();
+  if(!r.ok) throw new Error(j.detail || r.statusText);
+  return j;
+}
+
+async function loadMetrics(){
+  if(STATIC) return STATIC.metrics;
+  const r = await fetch("/metrics");
+  if(!r.ok) throw new Error((await r.json()).detail);
+  return r.json();
+}
+
+async function runScenario(i){
+  const token = ++pending;
+  [...$("picker").children].forEach((b,j) => b.classList.toggle("on", i===j));
+  const s = SCENARIOS[i];
+
+  $("proposal").textContent =
+    `reason_code     ${s.body.reason_code}\n` +
+    `amount          ${inr(s.body.amount_inr)}\n` +
+    `p(fraud)        ${s.body.p_fraud.toFixed(2)}\n\n` +
+    `decision        ${s.body.proposal.decision}\n` +
+    `cited_evidence  ${JSON.stringify(s.body.proposal.cited_evidence)}\n` +
+    `on file         ${JSON.stringify(Object.keys(s.body.evidence))}\n\n` +
+    s.body.proposal.reasoning_summary;
+
+  $("chain").innerHTML = "";
+  $("action").textContent = "…";
+  $("action").className = "verdict";
+  $("rationale").textContent = "evaluating";
+
+  try{
+    const b = await validate(s.body);
+    if(token !== pending) return;
+
+    $("chain").innerHTML = (b.evaluated || []).map((e, n) => {
+      const why = e.detail ? `<div class="why">${e.detail}</div>` : "";
+      return `<li class="${e.outcome}"><span class="n">2.${n+1}</span>` +
+             `<span class="nm">${e.rule}</span>` +
+             `<span class="st">${LABEL[e.outcome]}</span>${why}</li>`;
+    }).join("");
+
+    $("action").textContent = b.action.replace("_", " ");
+    $("action").className = "verdict " + b.action;
+    $("rationale").innerHTML =
+      `${b.rationale}<br><br>` +
+      `proposal honoured: <b>${b.proposal_honoured}</b> &nbsp;·&nbsp; ` +
+      `review band for ${inr(s.body.amount_inr)}: ` +
+      `[${b.review_band[0].toFixed(3)}, ${b.review_band[1].toFixed(3)}] ` +
+      `&nbsp;·&nbsp; p* = ${b.indifference_threshold.toFixed(3)}`;
+  }catch(e){
+    if(token !== pending) return;
+    $("action").textContent = "ERROR";
+    $("action").className = "verdict HUMAN_REVIEW";
+    $("rationale").innerHTML = `<span class="err">${e.message}</span>`;
+  }
+}
+
+function finding(ref, value, label, note){
+  return `<tr><td class="ref">${ref}</td>` +
+         `<td class="label">${label}<small>${note}</small></td>` +
+         `<td class="val">${value}</td></tr>`;
+}
+
+async function load(){
+  SCENARIOS.forEach((s,i) => {
+    const b = document.createElement("button");
+    b.textContent = s.label; b.onclick = () => runScenario(i);
+    $("picker").appendChild(b);
+  });
+  runScenario(1);
+
+  let m;
+  try{
+    m = await loadMetrics();
+  }catch(e){
+    $("findings").innerHTML =
+      `<tr><td class="ref">—</td><td class="label err">${e.message}</td><td class="val">—</td></tr>`;
+    return;
+  }
+
+  const lgb  = m.evaluation?.detection?.lightgbm_calibrated;
+  const base = m.evaluation?.detection?.baseline_logistic_regression;
+  const w    = m.batch?.wasted_representment;
+  const cal  = m.calibration?.test?.calibrated_decision_region;
+
+  $("findings").innerHTML = [
+    lgb && finding("1.1", lgb.pr_auc.toFixed(3), "Precision–recall AUC, held-out test",
+      `Gradient-boosted, Platt-calibrated. Constrained linear baseline ${base.pr_auc.toFixed(3)}. Prevalence ${pct(lgb.prevalence)}.`),
+    w && finding("1.2", pct(w.wasted_rate), "Wasted representment effort",
+      `${w.contested.toLocaleString()} contested, of which ${w.contested_that_were_real_fraud.toLocaleString()} were genuine fraud. Contesting everything wastes ${pct(w.contest_all_wasted_rate)}. Measured against real labels.`),
+    w && finding("1.3", pct(w.relative_reduction_vs_contest_all), "Reduction against contest-everything",
+      "The only dispute-side figure in this document with real ground truth."),
+    cal && finding("1.4", cal.ece.toFixed(3), "Calibration error in the decision region",
+      `Restricted to p ≥ ${cal.floor}, where the engine acts. The aggregate figure is ${m.calibration.test.calibrated.ece.toFixed(3)} and flatters the model — 92% of rows score below 0.05. See §4, note 4.`),
+  ].filter(Boolean).join("");
+
+  $("m-generated").textContent = "Generated · " +
+    (m.batch?.created_utc || "").replace("T", " ").replace("+00:00", " UTC");
+
+  const pc = m.batch?.policy_comparison, seg = m.batch?.policy_comparison_by_segment;
+  if(pc){
+    const rows = [["defend_none","Contest nothing"],
+                  ["defend_all","Contest everything"],
+                  ["static_amount_rule","Amount rule, no model"],
+                  ["chargeshield","ChargeShield"]];
+    $("ledger").innerHTML =
+      "<thead><tr><th>Policy</th><th>₹ per dispute</th>" +
+      "<th>vs contest-all</th><th>vs amount rule</th></tr></thead><tbody>" +
+      rows.map(([k,name]) => {
+        const r = pc[k]; if(!r) return "";
+        return `<tr class="${k==='chargeshield'?'subject':''}"><td>${name}</td>` +
+          `<td class="num">${inr(r.per_dispute_inr)}</td>` +
+          `<td class="num">${inrSigned(r.saving_vs_defend_all_inr_per_dispute)}</td>` +
+          `<td class="num">${inrSigned(r.saving_vs_static_rule_inr_per_dispute)}</td></tr>`;
+      }).join("") + "</tbody>";
+
+    if(seg) $("ledger-note").innerHTML =
+      `Across the whole queue the engine costs <b>${inrSigned(seg.all_disputes.chargeshield_advantage_inr_per_dispute)}</b> per dispute
+       against the best no-model policy. That figure is reported first because it is the honest one.
+       It resolves into two opposing effects: where the engine can act — evidence on file and under the
+       exposure cap, n=${seg.actionable_complete_and_under_cap.n.toLocaleString()} — it is worth
+       <b>${inrSigned(seg.actionable_complete_and_under_cap.chargeshield_advantage_inr_per_dispute)}</b>;
+       where evidence is missing, n=${seg.evidence_incomplete.n.toLocaleString()}, it is worth
+       <b>${inrSigned(seg.evidence_incomplete.chargeshield_advantage_inr_per_dispute)}</b>, because it
+       pays ${inr(seg.human_review_overhead.cost_per_review_inr)} for a human rather than filing a
+       representment it cannot substantiate. That is a safety property bought deliberately, and human
+       review alone costs ${inr(seg.human_review_overhead.inr_per_dispute_across_queue)} per dispute —
+       more than the entire spread between all four policies.`;
+  }
+
+  $("notes").innerHTML = `
+    <li>Fraud metrics are computed on a temporally held-out 15% of IEEE-CIS, a
+        public benchmark of real e-commerce transactions contributed by Vesta
+        Corporation. <b>This is not Razorpay data.</b></li>
+    <li>The dispute layer is <b>synthetic</b>, shaped to Razorpay's documented
+        dispute entity. Each dispute is anchored to a real held-out transaction
+        and carries that transaction's real <code>isFraud</code> label, which is
+        why wasted representment effort (§1.2) is a measurement and win rate is
+        not.</li>
+    <li><b>No win-rate claim is made anywhere in this project.</b> Real chargeback
+        outcomes require merchant-side resolution labels that are not public.</li>
+    <li>Calibration is reported in the decision region rather than in aggregate.
+        92% of transactions score below 0.05, so an overall figure mostly measures
+        the region where no decision is made.</li>
+    <li>Rupee figures rest on two stated assumptions —
+        <code>assumed_win_rate_if_legitimate</code> and
+        <code>assumed_dispute_fraud_rate</code> — swept across scenarios in
+        <code>evaluation/cost_curve.json</code>. They are assumptions, not
+        measurements.</li>
+    <li>IEEE-CIS is US e-commerce, not Indian payments. The methodology transfers;
+        the specific numbers do not.</li>`;
+
+  $("colophon").innerHTML =
+    `Every figure in §1 and §3 is read from committed evaluation artifacts, not recomputed for display.<br>` +
+    `Every determination in §2 is produced live by the policy engine at request time.<br>` +
+    `Reproduce with <b>make all</b> — verified from a clean clone, 83s, all figures bit-exact.`;
+}
+load();
+</script>

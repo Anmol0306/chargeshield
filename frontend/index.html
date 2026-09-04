@@ -129,11 +129,18 @@
   .caveat{font-size:12px;color:var(--dim);line-height:1.6;margin:14px 0 0;
           padding-top:11px;border-top:1px dotted var(--line-dark)}
   .caveat code{font-family:var(--mono);font-size:11px}
+  .banner{border:1px solid var(--line-dark);background:var(--sunken);
+          padding:11px 15px;margin-bottom:14px;font-size:12.5px;color:var(--ink-2);
+          line-height:1.6}
+  .banner b{color:var(--ink)}
+  .banner code{font-family:var(--mono);font-size:11.5px}
   .err{color:var(--fired);font-family:var(--mono);font-size:12px}
   a{color:inherit;text-decoration-color:var(--line-dark);text-underline-offset:2px}
 </style>
 
 <div class="sheet">
+
+  <div id="static-banner"></div>
 
   <div class="masthead">
     <h1>ChargeShield</h1>
@@ -248,6 +255,34 @@ const SCENARIOS = [
 let pending = 0;
 const LABEL = {fired:"fired", passed:"passed", not_reached:"not reached"};
 
+// STATIC MODE. scripts/build_static.py runs the real Python policy engine over
+// these exact scenarios at build time and injects the results, so a page served
+// with no backend still shows decisions the engine actually produced -- not
+// hand-written ones. With a backend present __STATIC__ is absent and every
+// click hits POST /disputes/validate for real. One source file, two modes, so
+// the page cannot fork into a live version and a demo version that drift.
+const STATIC = typeof window !== "undefined" ? window.__STATIC__ : null;
+
+async function validate(body){
+  if(STATIC){
+    const d = STATIC.decisions[body.dispute_id];
+    if(!d) throw new Error(`no precomputed decision for ${body.dispute_id}`);
+    return d;
+  }
+  const r = await fetch("/disputes/validate", {method:"POST",
+    headers:{"content-type":"application/json"}, body:JSON.stringify(body)});
+  const j = await r.json();
+  if(!r.ok) throw new Error(j.detail || r.statusText);
+  return j;
+}
+
+async function loadMetrics(){
+  if(STATIC) return STATIC.metrics;
+  const r = await fetch("/metrics");
+  if(!r.ok) throw new Error((await r.json()).detail);
+  return r.json();
+}
+
 async function runScenario(i){
   const token = ++pending;
   [...$("picker").children].forEach((b,j) => b.classList.toggle("on", i===j));
@@ -268,11 +303,8 @@ async function runScenario(i){
   $("rationale").textContent = "evaluating";
 
   try{
-    const r = await fetch("/disputes/validate", {method:"POST",
-      headers:{"content-type":"application/json"}, body:JSON.stringify(s.body)});
-    const b = await r.json();
+    const b = await validate(s.body);
     if(token !== pending) return;
-    if(!r.ok) throw new Error(b.detail || r.statusText);
 
     $("chain").innerHTML = (b.evaluated || []).map((e, n) => {
       const why = e.detail ? `<div class="why">${e.detail}</div>` : "";
@@ -313,9 +345,7 @@ async function load(){
 
   let m;
   try{
-    const r = await fetch("/metrics");
-    if(!r.ok) throw new Error((await r.json()).detail);
-    m = await r.json();
+    m = await loadMetrics();
   }catch(e){
     $("findings").innerHTML =
       `<tr><td class="ref">—</td><td class="label err">${e.message}</td><td class="val">—</td></tr>`;
