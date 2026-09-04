@@ -71,6 +71,29 @@ RULE_HIGH_FRAUD_ACCEPT = "fraud_probability_above_band"
 RULE_PROPOSAL_HONOURED = "proposal_honoured"
 RULE_PROPOSAL_OVERRIDDEN = "proposal_disagreed_with_cost_model"
 
+# The override chain, in evaluation order. Every decision reports its position
+# in this list: which rules were checked and passed, which one fired, and which
+# were never reached. A gate that only reports the rule that fired tells you the
+# verdict; this tells you the reasoning, which is what an auditor actually needs.
+RULE_ORDER = (
+    RULE_AMOUNT_CAP,
+    RULE_FABRICATED_EVIDENCE,
+    RULE_BELOW_ECONOMIC_FLOOR,
+    RULE_EVIDENCE_INSUFFICIENT,
+    RULE_COST_REVIEW_BAND,
+    RULE_HIGH_FRAUD_ACCEPT,
+    RULE_PROPOSAL_HONOURED,
+)
+
+
+@dataclass(frozen=True)
+class RuleEval:
+    """One rule's outcome: fired, passed, or never reached."""
+
+    rule: str
+    outcome: Literal["fired", "passed", "not_reached"]
+    detail: str = ""
+
 
 @dataclass(frozen=True)
 class PolicyDecision:
@@ -85,6 +108,7 @@ class PolicyDecision:
     missing_required_evidence: tuple[str, ...] = ()
     fabricated_evidence: tuple[str, ...] = ()
     proposed_action: str | None = None
+    evaluated: tuple[RuleEval, ...] = ()
 
     @property
     def proposal_rejected(self) -> bool:
@@ -119,7 +143,20 @@ def decide(
         reason_code, evidence, requirements, cited_evidence
     )
 
+    # Trace of what was checked, filled as the checks below run. Recording is
+    # deliberately separate from deciding: `passed` is called for its side
+    # effect only and never affects control flow, so the ordering and the early
+    # returns are exactly as they were before the trace existed.
+    trace: list[RuleEval] = []
+
+    def passed(rule: str, why: str) -> None:
+        trace.append(RuleEval(rule, "passed", why))
+
     def decision(action: Action, honoured: bool, rule: str, why: str) -> PolicyDecision:
+        trace.append(RuleEval(rule, "fired", why))
+        fired_at = RULE_ORDER.index(rule) if rule in RULE_ORDER else len(RULE_ORDER)
+        for later in RULE_ORDER[fired_at + 1:]:
+            trace.append(RuleEval(later, "not_reached"))
         return PolicyDecision(
             action=action,
             proposal_honoured=honoured,
@@ -132,6 +169,7 @@ def decide(
             missing_required_evidence=ev.missing_required,
             fabricated_evidence=ev.fabricated,
             proposed_action=proposed_action,
+            evaluated=tuple(trace),
         )
 
     # 1. Exposure limit. Independent of any model output being correct.
@@ -141,6 +179,9 @@ def decide(
             f"amount INR {amount_inr:,.0f} exceeds the automatic-action cap of "
             f"INR {config.auto_action_amount_cap_inr:,.0f}",
         )
+    passed(RULE_AMOUNT_CAP,
+           f"INR {amount_inr:,.0f} is within the INR "
+           f"{config.auto_action_amount_cap_inr:,.0f} cap")
 
     # 2. Fabrication. Checked before sufficiency: a proposal citing evidence
     #    that does not exist is untrustworthy about everything, not just this.
@@ -150,6 +191,9 @@ def decide(
             "proposal cited evidence not present in the evidence set: "
             + ", ".join(ev.fabricated),
         )
+    passed(RULE_FABRICATED_EVIDENCE,
+           "every cited evidence type is present in the evidence set"
+           if cited_evidence else "the proposal cited no evidence")
 
     # 3. Economically futile regardless of score or evidence.
     max_recovery = config.assumed_win_rate_if_legitimate * amount_inr
@@ -160,6 +204,9 @@ def decide(
             f"INR {config.representment_cost_inr:,.0f} representment cost, so no "
             f"score or evidence can make contesting worthwhile",
         )
+    passed(RULE_BELOW_ECONOMIC_FLOOR,
+           f"a win recovers INR {max_recovery:,.0f}, above the INR "
+           f"{config.representment_cost_inr:,.0f} representment cost")
 
     # 4. Cannot substantiate.
     if not ev.sufficient:
@@ -168,6 +215,8 @@ def decide(
             f"reason code {reason_code} requires evidence not on file: "
             + ", ".join(ev.missing_required),
         )
+    passed(RULE_EVIDENCE_INSUFFICIENT,
+           f"all evidence required for {reason_code} is on file")
 
     # 5. Automating is worth less than asking.
     low, high = band
@@ -180,6 +229,9 @@ def decide(
             f"contesting and accepting is smaller than the INR "
             f"{config.human_review_cost_inr:,.0f} cost of a human review",
         )
+    passed(RULE_COST_REVIEW_BAND,
+           f"p={p_fraud:.3f} is outside the review band "
+           f"[{low:.3f}, {high:.3f}]")
 
     # 6. Likely genuine fraud. Contesting burns cost to lose.
     if p_fraud > high:
@@ -188,6 +240,9 @@ def decide(
             f"p={p_fraud:.3f} exceeds the review band; contesting a likely-genuine "
             f"fraud costs INR {config.representment_cost_inr:,.0f} to lose",
         )
+    passed(RULE_HIGH_FRAUD_ACCEPT,
+           f"p={p_fraud:.3f} is below the review band, so contesting is "
+           f"cost-minimising")
 
     # 7. Below the band: contesting is the cost-minimising action.
     if proposed_action in (None, "CONTEST"):

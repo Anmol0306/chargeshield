@@ -25,6 +25,9 @@
   header.top{border-bottom:1px solid var(--line-strong);padding-bottom:20px;margin-bottom:8px}
   h1{font-size:23px;margin:0 0 6px;letter-spacing:-.015em;font-weight:650}
   .sub{color:var(--ink-2);margin:0;max-width:62ch}
+  .lede{color:var(--ink-2);margin:-4px 0 16px;max-width:74ch;font-size:14px}
+  .lede code{font-family:var(--mono);font-size:12.5px;background:var(--sunken);
+             padding:1px 5px;border-radius:3px}
   h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);
      margin:40px 0 14px;font-weight:650}
   .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
@@ -73,6 +76,23 @@
   .note li{margin:7px 0}
   .note code{font-family:var(--mono);font-size:12.5px;background:var(--sunken);
              padding:1px 5px;border-radius:3px}
+  .chain{list-style:none;margin:0 0 16px;padding:0;
+         border-top:1px solid var(--line);font-family:var(--mono);font-size:12px}
+  .chain li{display:grid;grid-template-columns:20px 1fr auto;gap:10px;
+            align-items:baseline;padding:7px 2px;border-bottom:1px solid var(--line)}
+  .chain .n{color:var(--dim);font-size:11px}
+  .chain .nm{color:var(--ink-2);word-break:break-word}
+  .chain .st{font-size:10.5px;font-weight:700;letter-spacing:.05em;
+             padding:2px 7px;border-radius:3px;white-space:nowrap}
+  .chain .why{grid-column:2/4;color:var(--dim);font-size:11px;line-height:1.5;
+              margin-top:-2px}
+  li.fired{background:var(--bad-bg)}
+  li.fired .nm{color:var(--bad);font-weight:700}
+  li.fired .st{background:var(--bad);color:#fff}
+  li.fired .why{color:var(--bad)}
+  li.passed .st{background:var(--ok-bg);color:var(--ok)}
+  li.not_reached{opacity:.42}
+  li.not_reached .st{background:var(--sunken);color:var(--dim)}
   .err{color:var(--bad);font-family:var(--mono);font-size:13px}
   a{color:var(--accent)}
 </style>
@@ -88,14 +108,19 @@
   <div class="tiles" id="tiles"><div class="tile"><div class="v">…</div><div class="k">loading</div></div></div>
 
   <h2>The gate — pick a scenario</h2>
+  <p class="lede">Seven overrides, evaluated in order. The proposal on the left is
+  untrusted input; it reaches an action only by surviving every rule on the right.
+  Each button is a live <code>POST /disputes/validate</code> — nothing here is
+  precomputed.</p>
   <div class="scenarios" id="scenarios"></div>
   <div class="gate">
     <div class="card">
-      <h3>Proposal (untrusted)</h3>
+      <h3>Proposal — untrusted input</h3>
       <pre id="proposal">—</pre>
     </div>
     <div class="card out">
-      <h3>Policy decision (deterministic)</h3>
+      <h3>Override chain — evaluated in order</h3>
+      <ol class="chain" id="chain"></ol>
       <div class="verdict"><span class="pill" id="action">—</span><span class="rule" id="rule"></span></div>
       <pre id="rationale">—</pre>
     </div>
@@ -191,15 +216,17 @@ async function runScenario(i){
     const b = await r.json();
     if(token !== pending) return;          // superseded by a later click
     if(!r.ok) throw new Error(b.detail || r.statusText);
+    const LABEL = {fired:"FIRED", passed:"passed", not_reached:"not reached"};
+    $("chain").innerHTML = (b.evaluated || []).map((e, i) => {
+      const why = e.detail ? `<div class="why">${e.detail}</div>` : "";
+      return `<li class="${e.outcome}"><span class="n">${i + 1}</span>` +
+             `<span class="nm">${e.rule}</span>` +
+             `<span class="st">${LABEL[e.outcome]}</span>${why}</li>`;
+    }).join("");
     $("action").textContent = b.action;
     $("action").className = "pill " + b.action;
     $("rule").textContent = b.rule;
-    let out = b.rationale;
-    if(b.fabricated_evidence?.length)
-      out += `\n\nBLOCKED fabricated citation: ${b.fabricated_evidence.join(", ")}`;
-    if(b.missing_required_evidence?.length)
-      out += `\n\nMissing required: ${b.missing_required_evidence.join(", ")}`;
-    out += `\n\nproposal_honoured: ${b.proposal_honoured}`;
+    let out = `proposal_honoured: ${b.proposal_honoured}`;
     out += `\nreview band for ${inr(s.body.amount_inr)}: `
          + `[${b.review_band[0].toFixed(3)}, ${b.review_band[1].toFixed(3)}]`
          + `  ·  p* = ${b.indifference_threshold.toFixed(3)}`;

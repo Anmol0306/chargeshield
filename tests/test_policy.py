@@ -245,3 +245,49 @@ def test_shipped_config_loads_and_is_frozen():
     assert 0 < cfg.assumed_win_rate_if_legitimate <= 1
     with pytest.raises(Exception):
         cfg.representment_cost_inr = 1.0     # frozen dataclass
+
+
+# --- the override chain ---------------------------------------------------
+
+def test_every_decision_reports_the_whole_chain():
+    """Returning only the rule that fired gives a verdict. The chain gives the
+    reasoning, which is what an auditor needs."""
+    from app.policy.action_policy import RULE_ORDER
+
+    d = call()
+    assert [e.rule for e in d.evaluated] == list(RULE_ORDER)
+    assert sum(e.outcome == "fired" for e in d.evaluated) == 1
+
+
+def test_chain_marks_rules_after_the_firing_one_as_not_reached():
+    from app.policy.action_policy import RULE_ORDER
+
+    d = call(amount_inr=90_000.0)          # rule 1 fires
+    assert d.evaluated[0].outcome == "fired"
+    assert all(e.outcome == "not_reached" for e in d.evaluated[1:])
+    assert len(d.evaluated) == len(RULE_ORDER)
+
+
+def test_chain_records_why_each_passed_rule_did_not_fire():
+    d = call()
+    for e in d.evaluated:
+        if e.outcome == "passed":
+            assert e.detail, f"{e.rule} passed without saying why"
+
+
+def test_fired_rule_in_chain_matches_the_decision():
+    for kw in (dict(), dict(amount_inr=90_000.0), dict(evidence={}),
+               dict(p_fraud=0.99), dict(amount_inr=400.0), dict(p_fraud=0.88),
+               dict(cited_evidence=["proof_of_service"])):
+        d = call(**kw)
+        fired = [e.rule for e in d.evaluated if e.outcome == "fired"]
+        assert fired == [d.rule], f"{kw}: chain says {fired}, decision says {d.rule}"
+
+
+def test_trace_does_not_change_the_decision():
+    """The trace is recorded for its side effect only. If adding it altered
+    control flow, these would differ from the documented override order."""
+    assert call(amount_inr=90_000.0, evidence={},
+                cited_evidence=["proof_of_service"]).rule == RULE_AMOUNT_CAP
+    assert call(evidence={}, cited_evidence=["proof_of_service"]).rule == \
+        RULE_FABRICATED_EVIDENCE

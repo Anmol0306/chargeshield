@@ -71,6 +71,9 @@ def build_record(
             "missing_required": d["missing_required_evidence"],
             "fabricated": d["fabricated_evidence"],
         },
+        # The whole chain, not just the rule that fired. An auditor asking
+        # "was the amount cap checked?" should not have to infer it.
+        "rules_evaluated": d.get("evaluated", []),
         # Fingerprint: thresholds move when these move, so a record without
         # them becomes unexplainable the moment config/costs.yaml is edited.
         "cost_assumptions": {

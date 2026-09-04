@@ -120,6 +120,15 @@ class ValidateRequest(BaseModel):
     proposal: DisputeProposal
 
 
+class RuleEvalResponse(BaseModel):
+    """One rule's outcome in the override chain."""
+
+    model_config = ConfigDict(extra="forbid")
+    rule: str
+    outcome: Literal["fired", "passed", "not_reached"]
+    detail: str = ""
+
+
 class PolicyDecisionResponse(BaseModel):
     """What the API returns. The decision, the rule, and why -- never the
     proposal alone."""
@@ -138,3 +147,7 @@ class PolicyDecisionResponse(BaseModel):
     indifference_threshold: float
     review_band: tuple[float, float]
     proposal: DisputeProposal | None = None
+    # The whole override chain, in order — what was checked and passed, what
+    # fired, what was never reached. Returning only the rule that fired gives a
+    # verdict; this gives the reasoning.
+    evaluated: list[RuleEvalResponse] = Field(default_factory=list)

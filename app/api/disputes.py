@@ -20,6 +20,7 @@ from fastapi import APIRouter, HTTPException
 from app.models.schemas import (
     DisputeAnalysisRequest,
     PolicyDecisionResponse,
+    RuleEvalResponse,
     ValidateRequest,
 )
 from app.policy.action_policy import decide
@@ -73,6 +74,9 @@ def _respond(dispute_id: str, decision, proposal, source: str) -> PolicyDecision
         indifference_threshold=decision.indifference_threshold,
         review_band=decision.review_band,
         proposal=proposal,
+        evaluated=[RuleEvalResponse(rule=e.rule, outcome=e.outcome,
+                                    detail=e.detail)
+                   for e in decision.evaluated],
     )
 
 
