@@ -19,9 +19,7 @@ DISPUTES = pathlib.Path("data/processed/disputes.json")
 PROCESSED = pathlib.Path("data/processed")
 PREDS = pathlib.Path("evaluation/preds")
 
-# From https://razorpay.com/docs/api/disputes/entity/ (retrieved 2026-09-02).
-# If a field appears in the output that is not here, either the docs changed or
-# something was invented.
+# From https://razorpay.com/docs/api/disputes/entity/ 
 DOCUMENTED_TOP_LEVEL = {
     "id", "entity", "payment_id", "amount", "currency", "amount_deducted",
     "reason_code", "reason_description", "respond_by", "status", "phase",
