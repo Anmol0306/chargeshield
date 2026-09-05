@@ -1,10 +1,9 @@
 """
 Feature construction. Fit on train, apply to val/test — never the reverse.
 
-STARTER_TRANSACTION_COLS is deliberately narrow: it skips the 339 V-columns
-on day one. That's not just a modelling choice — it's also why data_prep.py
+STARTER_TRANSACTION_COLS is deliberately narrow: it skips the 339 V-columns.
+That's not just a modelling choice — it's also why data_prep.py
 can use `usecols` on read and never pay to parse columns we're not using yet.
-Widen this list on Day 2+ only if the baseline is solid and there's time.
 
 FEATURE POLICY FOR THE LINEAR BASELINE
   We use a constrained starter feature set, one-hot encode the manageable
@@ -24,10 +23,7 @@ MISSINGNESS IS NOT STATIONARY ACROSS THE SPLIT
     M7-M9  66.9%                  -> 40.0%
     id_01  73.4%                  -> 82.3%  (identity join coverage moves the
                                              other way)
-  So the missing-indicator features carry train/val distribution shift. That is
-  a property of time-splitting real data, not a bug — but it is a reason not to
-  over-read a val/test gap, and it must be stated rather than discovered by a
-  reviewer.
+  So the missing-indicator features carry train/val distribution shift. 
 
 LEAKAGE CHECKLIST — run before every training run:
   [ ] isFraud not in feature list
@@ -52,7 +48,7 @@ STARTER_TRANSACTION_COLS = [
 
 STARTER_IDENTITY_COLS = ["id_01", "id_02", "DeviceType", "DeviceInfo"]
 
-# The 339 anonymised engineered features. Skipped on day one (see above); added
+# added
 # for the gradient-boosted model, which is the point of having one. Kept as a
 # separate constant rather than folded into STARTER_TRANSACTION_COLS so the
 # baseline's feature partition below stays exactly as it was when the baseline
