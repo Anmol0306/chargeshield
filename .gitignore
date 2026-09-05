@@ -26,6 +26,9 @@ venv/
 .pytest_cache/
 .ipynb_checkpoints/
 
+# Generated documentation — regenerate with `make guide`
+docs/ChargeShield-Guide.pdf
+
 # Editor / agent tooling — not part of the project
 .claude/
 

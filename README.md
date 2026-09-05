@@ -26,11 +26,19 @@ actual policy engine at build time rather than written by hand. Rebuild with
 `make static`. For the gate running live, one HTTP request per click, use
 `make api`.
 
-**Full written guide:** [docs/ChargeShield-Guide.pdf](docs/ChargeShield-Guide.pdf)
-— 31 pages covering the problem, every module, the cost derivation, the policy
-engine, all 69 decisions, all 7 failures, the limitations, and anticipated
-questions. Regenerate with `python -m scripts.build_guide`; every number in it
-is read from the repository at build time.
+**Full written guide:** a 32-page PDF covering the problem, every module, the
+cost derivation, the policy engine, all 72 decisions, all 7 failures, the
+limitations and anticipated questions. It is generated rather than committed —
+build it with:
+
+```bash
+pip install reportlab && make guide     # -> docs/ChargeShield-Guide.pdf
+```
+
+Every number in it is read from the repository at build time, so it cannot
+drift from the artifacts it describes. `reportlab` is a documentation
+dependency only and is deliberately not in `requirements.txt`, which is the
+application's runtime contract.
 
 ## ML methodology
 ### Dataset
