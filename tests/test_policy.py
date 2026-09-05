@@ -1,5 +1,5 @@
 """
-The gate. These are the tests you show on camera.
+The gate. 
 
 The claim being defended is "the LLM cannot move money", and it is defended
 structurally: decide() is a pure function that receives thresholds as an
