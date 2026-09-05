@@ -1,8 +1,7 @@
 """The recorded demo must keep matching the system.
 
 demo/run_demo.py asserts every scenario's action and rule and exits non-zero if
-any changes. Running it here means a policy change that would invalidate the
-video breaks the build instead of being discovered on playback.
+any changes. 
 """
 import json
 import pathlib
