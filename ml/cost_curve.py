@@ -55,17 +55,6 @@ THE POPULATION PROBLEM -- READ THIS BEFORE THE NUMBERS
   everything" and no threshold can earn its keep. That is an artefact of the
   population, not a finding about the product.
 
-  So the sweep is repeated under prior shift: the score is re-calibrated and
-  the population re-weighted to a range of assumed dispute-queue fraud rates.
-  This answers the question a reviewer will actually ask -- at what dispute
-  composition does a model beat "contest everything"? -- instead of hiding
-  behind a base rate that flatters nobody.
-
-  Both the as-observed result and the shifted ones are reported. The
-  as-observed one is the honest embarrassment; the shifted ones are the
-  informative part. Day 3 (ml/link_disputes.py) anchors disputes to real
-  held-out transactions and makes this concrete.
-
 SCALE HONESTY
   The headline figure is rupees PER DISPUTE. Totals are reported only under an
   explicit "if every held-out transaction were disputed" label.
@@ -96,8 +85,7 @@ CHARTS_DIR = EVAL_DIR / "charts"
 GRID = np.linspace(0.0, 1.0, 201)
 
 # Assumed fraud rate of a real dispute queue. The first entry is the split's
-# own rate, kept so the artefact above stays visible rather than quietly
-# replaced by a more flattering assumption.
+# own rate, kept so the artefact above stays visible
 ASSUMED_DISPUTE_FRAUD_RATES = [None, 0.20, 0.35, 0.50, 0.65]
 EPS = 1e-9
 
