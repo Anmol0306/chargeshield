@@ -1,0 +1,94 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>ChargeShield — cards</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Opening and closing cards for the demo video. Same palette and typefaces
+     as the interface, so the video reads as one piece rather than a slide
+     bolted onto a screen recording.
+
+     Fonts load from Google; if you record offline the fallbacks (Georgia,
+     Menlo) are deliberate and still look right. */
+  :root{
+    --paper:#fcfcfa; --ink:#16181a; --ink-2:#3d4348; --dim:#767d84;
+    --line:#dcdcd6; --line-dark:#a8a89f; --accent:#8f1d2c;
+    --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);
+       display:grid;place-items:center;overflow:hidden;-webkit-font-smoothing:antialiased}
+  .card{display:none;width:min(1100px,86vw);text-align:left}
+  .card.on{display:block;animation:in .5s ease-out}
+  @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .rule{border-top:3px double var(--line-dark);margin:0 0 26px}
+  .rule.b{border-top:0;border-bottom:3px double var(--line-dark);margin:30px 0 0}
+
+  h1{font-family:var(--mono);font-size:clamp(34px,5.6vw,62px);font-weight:600;
+     letter-spacing:.17em;margin:0 0 18px;text-transform:uppercase;line-height:1.1}
+  .tag{font-size:clamp(17px,2.1vw,25px);line-height:1.5;color:var(--ink-2);
+       font-style:italic;margin:0 0 30px;max-width:26ch}
+  .tag b{font-style:normal;color:var(--ink)}
+  .meta{font-family:var(--mono);font-size:clamp(10px,1.15vw,13px);color:var(--dim);
+        letter-spacing:.1em;text-transform:uppercase;line-height:2.1}
+
+  .claim{font-family:var(--mono);font-size:clamp(15px,2vw,24px);line-height:1.85;
+         color:var(--ink);letter-spacing:.01em}
+  .claim .n{color:var(--accent);font-weight:600}
+  .kicker{font-size:clamp(19px,2.5vw,30px);line-height:1.45;margin:0 0 28px;max-width:28ch}
+  .links{font-family:var(--mono);font-size:clamp(11px,1.25vw,14px);color:var(--dim);
+         margin-top:26px;line-height:2}
+
+  .hint{position:fixed;bottom:14px;right:18px;font-family:var(--mono);font-size:10px;
+        color:var(--line-dark);letter-spacing:.08em}
+  body.clean .hint{display:none}
+</style>
+
+<div class="card on" id="c1">
+  <div class="rule"></div>
+  <h1>ChargeShield</h1>
+  <p class="tag">Cost-sensitive fraud scoring and bounded chargeback defence.<br>
+     <b>The model proposes. A deterministic policy engine decides.</b></p>
+  <div class="meta">
+    Razorpay AI Buildathon 2026 &nbsp;·&nbsp; Track 02, AI Risk Manager<br>
+    Anmol Kaushik &nbsp;·&nbsp; Defence-only &nbsp;·&nbsp; Five days, one person
+  </div>
+  <div class="rule b"></div>
+</div>
+
+<div class="card" id="c2">
+  <div class="rule"></div>
+  <p class="kicker">Everything in this video reproduces from a clean clone.</p>
+  <div class="claim">
+    <span class="n">make all</span> &nbsp;&rarr;&nbsp; 83 seconds<br>
+    <span class="n">224</span> tests &nbsp;·&nbsp; <span class="n">162</span> behavioural
+    &nbsp;·&nbsp; <span class="n">0</span> asserting nothing<br>
+    every published number, bit-exact
+  </div>
+  <div class="links">
+    github.com/Anmol0306/chargeshield<br>
+    anmol0306.github.io/chargeshield
+  </div>
+  <div class="rule b"></div>
+</div>
+
+<div class="hint">space / click &middot; c hides this</div>
+
+<script>
+  // Space, arrows or a click advance. `c` hides the hint before you record.
+  let i = 0;
+  const cards = [...document.querySelectorAll('.card')];
+  const show = n => { i = (n + cards.length) % cards.length;
+                      cards.forEach((c, j) => c.classList.toggle('on', j === i)); };
+  addEventListener('keydown', e => {
+    if (e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); show(i + 1); }
+    if (e.key === 'ArrowLeft') show(i - 1);
+    if (e.key.toLowerCase() === 'c') document.body.classList.toggle('clean');
+  });
+  addEventListener('click', () => show(i + 1));
+</script>
