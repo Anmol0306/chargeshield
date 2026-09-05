@@ -29,10 +29,6 @@ currency:
 # means CONTEST (defensible), HIGH p(fraud) means ACCEPT (contesting burns
 # cost to lose). See docs/ARCHITECTURE.md.
 #
-# (An earlier version of this file carried fp_cost_inr / fn_cost_inr keys
-# describing block-vs-allow screening economics. Those modelled a product
-# that blocks transactions, which ChargeShield is not. Replaced Sep 1.)
-# --------------------------------------------------------------------------
 dispute_economics:
   # THE MOST ATTACKABLE NUMBER IN THIS PROJECT. Read this before quoting any
   # rupee figure.
