@@ -168,8 +168,7 @@ The review band is derived, not guessed: it is the region where expected cost
 is within one human review (₹150) of the optimum. It came out wide — 0.405 —
 because the cost curve is genuinely flat there. That is an honest result and an
 unresolved one: as it stands the band swallows the ACCEPT action entirely,
-which contradicts the illustrative table in `docs/ARCHITECTURE.md`. Reconciling
-the two is Day 3 work, and the band was **not** narrowed by adjusting the human
+which contradicts the illustrative table in `docs/ARCHITECTURE.md`. The band was **not** narrowed by adjusting the human
 review cost to taste.
 
 ## Cost model
