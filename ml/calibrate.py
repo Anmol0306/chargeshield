@@ -22,9 +22,6 @@ WHERE THE CALIBRATOR IS FIT, AND WHY NOT TRAIN
       val_pick = last  30% of val   -> the winner is chosen here, unseen by both
   Test is then scored once with the winner and is the only clean number.
 
-  Stated plainly because a reviewer will ask: val now does three jobs (early
-  stopping, calibrator fitting, method selection). It is not a held-out
-  estimate and is never reported as one.
 
 MONOTONICITY AS A SELF-CHECK
   Platt is a strictly monotonic transform, so it CANNOT change ranking --
