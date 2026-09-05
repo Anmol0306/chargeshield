@@ -64,9 +64,9 @@ SCENARIOS = [
 BANNER = """<div class="banner">
 <b>Static preview — outputs precomputed by the ChargeShield Python engine.</b>
 This page makes no API calls and needs no backend.<br><br>
-&sect;1 and &sect;3 are read from the committed evaluation artifacts — the same files
+Sections 1 and 3 are read from the committed evaluation artifacts — the same files
 the live <code>/metrics</code> endpoint serves, so they are identical either way.
-&sect;2's determinations were produced by the policy engine itself,
+Section 2's determinations were produced by the policy engine itself,
 <code>app/policy/action_policy.py</code>, at build time: not written by hand, and
 not reimplemented in JavaScript.<br><br>
 To watch the gate execute per click instead — one HTTP request per scenario —

@@ -38,12 +38,12 @@
   h2{font-family:var(--mono);font-size:12.5px;font-weight:600;letter-spacing:.11em;
      text-transform:uppercase;color:var(--ink);margin:46px 0 4px;
      padding-bottom:7px;border-bottom:1px solid var(--line-dark)}
-  h2 .no{color:var(--dim);margin-right:12px}
+  h2 .no{color:var(--dim);margin-right:14px;font-variant-numeric:tabular-nums}
   .standfirst{color:var(--ink-2);margin:12px 0 20px;font-size:15.5px;max-width:70ch}
   .standfirst code,p code{font-family:var(--mono);font-size:13px;
        background:var(--sunken);padding:1px 5px;border:1px solid var(--line)}
 
-  /* §1 findings — a table of contents, not tiles */
+  /* 1 findings — a table of contents, not tiles */
   .findings{width:100%;border-collapse:collapse}
   .findings td{padding:11px 0;border-bottom:1px dotted var(--line-dark);
                vertical-align:baseline}
@@ -56,7 +56,7 @@
                  text-align:right;white-space:nowrap;padding-left:20px;
                  font-variant-numeric:tabular-nums}
 
-  /* §2 the exhibit */
+  /* 2 the exhibit */
   .exhibit{border:1px solid var(--line-dark);background:#fff;margin-top:6px}
   .exhibit .cap{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
                 text-transform:uppercase;color:var(--dim);
@@ -106,7 +106,7 @@
   .verdict.HUMAN_REVIEW{color:var(--fired)}
   .finding .sub{color:var(--dim);font-size:11px;margin-top:6px;line-height:1.6}
 
-  /* §3 cost table */
+  /* 3 cost table */
   table.ledger{width:100%;border-collapse:collapse;font-size:14.5px}
   table.ledger th{font-family:var(--mono);font-size:10px;letter-spacing:.09em;
                   text-transform:uppercase;color:var(--dim);font-weight:600;
@@ -120,7 +120,7 @@
   .ledger-note{font-size:13.5px;color:var(--ink-2);margin:14px 0 0;
                padding-left:16px;border-left:2px solid var(--line-dark);max-width:72ch}
 
-  /* §4 footnotes */
+  /* 4 footnotes */
   ol.notes{font-size:14px;color:var(--ink-2);padding-left:22px;margin:6px 0 0}
   ol.notes li{margin:9px 0;padding-left:4px}
   ol.notes code{font-family:var(--mono);font-size:12.5px}
@@ -144,14 +144,14 @@
   <div class="banner">
 <b>Static preview — outputs precomputed by the ChargeShield Python engine.</b>
 This page makes no API calls and needs no backend.<br><br>
-&sect;1 and &sect;3 are read from the committed evaluation artifacts — the same files
+Sections 1 and 3 are read from the committed evaluation artifacts — the same files
 the live <code>/metrics</code> endpoint serves, so they are identical either way.
-&sect;2's determinations were produced by the policy engine itself,
+Section 2's determinations were produced by the policy engine itself,
 <code>app/policy/action_policy.py</code>, at build time: not written by hand, and
 not reimplemented in JavaScript.<br><br>
 To watch the gate execute per click instead — one HTTP request per scenario —
 <code>git clone</code> &rarr; <code>make all</code> &rarr; <code>make api</code>.
-Built 2026-09-05 from commit <code>a7325b8</code>.
+Built 2026-09-05 from commit <code>f48738c</code>.
 </div>
 
   <div class="masthead">
@@ -165,12 +165,12 @@ Built 2026-09-05 from commit <code>a7325b8</code>.
     </div>
   </div>
 
-  <h2><span class="no">§1</span>Findings</h2>
+  <h2><span class="no">1</span>Findings</h2>
   <table class="findings"><tbody id="findings">
     <tr><td class="ref">—</td><td class="label">loading</td><td class="val">…</td></tr>
   </tbody></table>
 
-  <h2><span class="no">§2</span>The override chain</h2>
+  <h2><span class="no">2</span>The override chain</h2>
   <p class="standfirst">Seven rules, evaluated in order. A proposal is untrusted
     input and reaches an action only by surviving every one of them. Each
     selection below issues a live <code>POST /disputes/validate</code> against
@@ -201,14 +201,14 @@ Built 2026-09-05 from commit <code>a7325b8</code>.
     </div>
   </div>
 
-  <h2><span class="no">§3</span>Cost of the policy, against alternatives</h2>
+  <h2><span class="no">3</span>Cost of the policy, against alternatives</h2>
   <p class="standfirst">Realised cost per dispute over 5,013 disputes anchored to
     real held-out transactions, scored against their real <code>isFraud</code>
     labels.</p>
   <table class="ledger" id="ledger"><tbody><tr><td>loading…</td></tr></tbody></table>
   <p class="ledger-note" id="ledger-note"></p>
 
-  <h2><span class="no">§4</span>Limitations and stated assumptions</h2>
+  <h2><span class="no">4</span>Limitations and stated assumptions</h2>
   <ol class="notes" id="notes"></ol>
 
   <div class="colophon" id="colophon"></div>
@@ -378,7 +378,7 @@ async function load(){
     w && finding("1.3", pct(w.relative_reduction_vs_contest_all), "Reduction against contest-everything",
       "The only dispute-side figure in this document with real ground truth."),
     cal && finding("1.4", cal.ece.toFixed(3), "Calibration error in the decision region",
-      `Restricted to p ≥ ${cal.floor}, where the engine acts. The aggregate figure is ${m.calibration.test.calibrated.ece.toFixed(3)} and flatters the model — 92% of rows score below 0.05. See §4, note 4.`),
+      `Restricted to p ≥ ${cal.floor}, where the engine acts. The aggregate figure is ${m.calibration.test.calibrated.ece.toFixed(3)} and flatters the model — 92% of rows score below 0.05. See note 4 in section 4.`),
   ].filter(Boolean).join("");
 
   $("m-generated").textContent = "Artifacts · " +
@@ -422,7 +422,7 @@ async function load(){
     <li>The dispute layer is <b>synthetic</b>, shaped to Razorpay's documented
         dispute entity. Each dispute is anchored to a real held-out transaction
         and carries that transaction's real <code>isFraud</code> label, which is
-        why wasted representment effort (§1.2) is a measurement and win rate is
+        why wasted representment effort (finding 1.2) is a measurement and win rate is
         not.</li>
     <li><b>No win-rate claim is made anywhere in this project.</b> Real chargeback
         outcomes require merchant-side resolution labels that are not public.</li>
@@ -438,8 +438,8 @@ async function load(){
         the specific numbers do not.</li>`;
 
   $("colophon").innerHTML =
-    `Every figure in §1 and §3 is read from committed evaluation artifacts, not recomputed for display.<br>` +
-    `Every determination in §2 is produced live by the policy engine at request time.<br>` +
+    `Every figure in sections 1 and 3 is read from committed evaluation artifacts, not recomputed for display.<br>` +
+    `Every determination in section 2 is produced live by the policy engine at request time.<br>` +
     `Reproduce with <b>make all</b> — verified from a clean clone, 83s, all figures bit-exact.`;
 }
 load();
