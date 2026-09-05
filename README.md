@@ -50,12 +50,7 @@ are marked fraud too, that transactions with nothing reported within 120 days
 are marked legitimate, and that genuinely fraudulent activity which was never
 reported is therefore labelled legitimate.
 
-**That attribution is repeated here as unverified.** It appears in secondary
-sources rather than one I could open: the host discussion thread
-([101203](https://www.kaggle.com/c/ieee-fraud-detection/discussion/101203))
-requires a Kaggle account, and this project does not cite sources it has not
-read. If you can open it, verify it — do not take this paragraph as
-confirmation.
+**That attribution is repeated here as unverified.** 
 
 **The project is built so that it does not matter.** Nothing here requires the
 label to be chargeback-derived. What it requires is weaker and verifiable:
