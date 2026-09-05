@@ -24,5 +24,5 @@ demo:       ; $(PYTHON) -m demo.run_demo $(ARGS)
 clean:      ; rm -rf artifacts/*.pkl evaluation/*.json evaluation/charts/*.png \
 	                 evaluation/preds/*.parquet evidence/audit_log.jsonl
 
-# Full reproducible path — this is what a reviewer runs
+# Full reproducible path 
 all: data baseline train calibrate cost evaluate link batch test
