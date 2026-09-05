@@ -1,7 +1,6 @@
 # Decisions
 
-What I cut, and why. Five days, one person.
-A defensible cut is engineering; an undefended one is scope creep.
+What I cut, and why. 
 
 | Date | Decision | Reason | Cost accepted |
 |---|---|---|---|
